@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<manifest identifier='man00001' 
+xmlns:bb='http://www.blackboard.com/content-packaging/'><organizations/><resources><resource bb:file='res00001.dat' 
+bb:title='trying images' identifier='res00001' type='assessment/x-bb-qti-test' xml:base='res00001'>
+</resource><resource bb:file='res00002.dat' 
+bb:title='Assessment Creation Settings' identifier='res00002' type='course/x-bb-courseassessmentcreationsettings' 
+xml:base='res00002'/><resource bb:file='res00003.dat' bb:title='Shared Objects Repository' identifier='res00003' 
+type='resource/x-bb-lor' xml:base='res00003'/></resources></manifest> 

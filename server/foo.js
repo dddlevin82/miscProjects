@@ -1,0 +1,3 @@
+blah = function() {
+	alert('hello!');
+}

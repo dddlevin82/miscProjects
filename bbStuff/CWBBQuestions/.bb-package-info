@@ -1,0 +1,45 @@
+#Bb PackageInfo Property File
+
+			#Fri Aug 10 14:49:02 PDT 2012
+
+			java.class.path=/usr/local/blackboard/apps/service-wrapper/lib/wrapper.jar\:/usr/local/java/lib/tools.jar\:/usr/local/blackboard/apps/tomcat/bin/bootstrap.jar\:/usr/local/blackboard/apps/tomcat/lib/bb-tomcat-bootstrap.jar\:/usr/local/blackboard/apps/tomcat/lib/log4j.jar
+
+			cx.config.course.id=CH_122_400_W2012
+
+			java.vendor=Sun Microsystems Inc.
+
+			os.name=SunOS
+
+			os.arch=sparcv9
+
+			java.home=/usr/local/jdk1.6.0_29/jre
+
+			db.product.name=Oracle
+
+			cx.package.info.version=6.0
+
+			os.version=5.10
+
+			cx.config.full.value=CxConfig{operation\=EXPORT, courseid\=CH_122_400_W2012, package\=/usr/local/blackboard/content/vi/bb_bb60/sessions/5/8/9/3/5/8/3/4/session/Test_ExportFile_CH_122_400_W2012_trying images.zip, logger\=CxLogger{logs\=[Log{name\=/usr/local/blackboard/content/vi/bb_bb60/sessions/5/8/9/3/5/8/3/4/session/Test_ExportFile_CH_122_400_W2012_trying images.log, verbosity\=default}, Log{name\=STDOUT, verbosity\=default}], logHooks\=[]}, resource_type_inclusions\=[resource/x-bb-lor], area_inclusions\=[ALIGNMENTS], area_exclusions\=[ALL], object_inclusions\={ASSESSMENT\=[_12151315_1]}, object_exclusions\={}, features\={CreateOrg\=false, Bb5LinkToBrokenImageFix\=true, ArchiveUserPasswords\=false}, strHostName\=null, isCommandLineRequest\=false, isCourseConversion\=false, eventHandlers\=[]}
+
+			cx.config.package.name=/usr/local/blackboard/content/vi/bb_bb60/sessions/5/8/9/3/5/8/3/4/session/Test_ExportFile_CH_122_400_W2012_trying images.zip
+ 
+			db.product.version=Oracle Database 10g Release 10.2.0.4.0 - 64bit Production
+
+			db.driver.name=Oracle JDBC driver
+
+			cx.config.operation=blackboard.apps.cx.CxConfig$Operation\:EXPORT
+
+			java.version=1.6.0_29
+
+			cx.config.package.identifier=41ae306fac8d4ec99285c38a2ff019ca
+
+			db.driver.version=11.1.0.7.0-Production
+
+			java.default.locale=en_US
+
+			app.release.number=9.1.50119.0
+
+			cx.config.logs=[Log{name\=/usr/local/blackboard/content/vi/bb_bb60/sessions/5/8/9/3/5/8/3/4/session/Test_ExportFile_CH_122_400_W2012_trying images.log, verbosity\=default}, Log{name\=STDOUT, verbosity\=default}]
+
+			
