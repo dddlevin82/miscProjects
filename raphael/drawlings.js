@@ -21,7 +21,7 @@ rects.moveBlock = function(curIdx, newIdx) {
 				this[idx+1].idx++;
 				toAnim.push(this[idx+1]);
 			}
-		} else if (newIdx>curIdx) {
+		} else if (newIdx>curIdx) { //YO DAWG, THIS IS WRONG.  JUST DO SOME LIST SPLICING.
 			for (var idx=curIdx; idx<newIdx; idx++) {
 				this[idx] = this[idx+1];
 				this[idx].idx--;
@@ -30,14 +30,14 @@ rects.moveBlock = function(curIdx, newIdx) {
 		} 
 		this.flyToIdx(toAnim);
 		this[newIdx] = moving;
+		moving.idx = newIdx;
 	}
 }
 rects.flyToIdx = function(toAnim) {
 	for (var blockIdx=0; blockIdx<toAnim.length; blockIdx++) {
 		var block = toAnim[blockIdx];
-		var x = block._.dx;
-		var y = block.idx*this.height;
-		block.animate({transform:'t' + x + ',' + y}, 250);
+		block.snapToIdx();
+
 	}
 }
 r.attr(
@@ -51,6 +51,7 @@ r.attr(
 //YO YO - gradient is relative to original position
 function onStart() {
 	//make like this.mouseInit.setTo(mousePos);
+	this.toFront();
 	this.mouseInit = mousePos.copy();
 	this.posInit = P(this._.dx, this._.dy);
 	this.attr({fill:fillSelect});
@@ -60,7 +61,7 @@ function onStart() {
 function onMove() {
 	var x = (mousePos.x-this.mouseInit.x) + this.posInit.x;
 	var y = (mousePos.y-this.mouseInit.y) + this.posInit.y;
-	var idx = Math.min(rects.num-1, Math.max(0, (y-rects.pos.y)%rects.height));
+	var idx = Math.min(rects.num-1, Math.max(0, Math.floor((y-rects.pos.y)/rects.height)));
 	console.log(idx);
 	if (idx != this.idx) {
 		console.log(idx);
@@ -74,6 +75,7 @@ function onEnd() {
 	this.mouseInit = undefined;
 	this.posInit = undefined;
 	this.attr({fill:fillUnselect});
+	this.snapToIdx();
 }
 
 
@@ -96,6 +98,11 @@ function createRects(pos, numRects) {
 				'stroke-linejoin': 'round',  
 			}
 		)
+		r.snapToIdx = function() {
+			var x = rects.pos.x;
+			var y = this.idx*rects.height+rects.pos.y;
+			this.animate({transform:'t' + x + ',' + y}, 250);		
+		}
 		r.drag(onMove, onStart, onEnd);
 		r.idx = rectIdx;
 		rects.push(r);
