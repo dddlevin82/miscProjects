@@ -21,7 +21,7 @@ rects.moveBlock = function(curIdx, newIdx) {
 				this[idx+1].idx++;
 				toAnim.push(this[idx+1]);
 			}
-		} else if (newIdx>curIdx) { //YO DAWG, THIS IS WRONG.  JUST DO SOME LIST SPLICING.
+		} else if (newIdx>curIdx) {
 			for (var idx=curIdx; idx<newIdx; idx++) {
 				this[idx] = this[idx+1];
 				this[idx].idx--;
