@@ -9,6 +9,7 @@ var fillSelect = '#526c7a';
 
 rects = createRects(P(50, 50), 5);
 rects.height = 40;
+rects.spacing = 15;
 rects.pos = P(50, 50);
 rects.num = 5;
 rects.moveBlock = function(curIdx, newIdx) {
@@ -48,9 +49,13 @@ r.attr(
 		'stroke-linejoin': 'round',  
 	}
 )
+rects.getY = function(idx) {
+	return this.pos.y+idx*(this.height+this.spacing);
+}
 //YO YO - gradient is relative to original position
 function onStart() {
 	//make like this.mouseInit.setTo(mousePos);
+	this.released = false;
 	this.toFront();
 	this.mouseInit = mousePos.copy();
 	this.posInit = P(this._.dx, this._.dy);
@@ -61,13 +66,18 @@ function onStart() {
 function onMove() {
 	var x = (mousePos.x-this.mouseInit.x) + this.posInit.x;
 	var y = (mousePos.y-this.mouseInit.y) + this.posInit.y;
-	var idx = Math.min(rects.num-1, Math.max(0, Math.floor((y-rects.pos.y)/rects.height)));
+	var idx = Math.min(rects.num-1, Math.max(0, Math.floor((y+rects.height/2-rects.pos.y)/(rects.height+rects.spacing))));
 	console.log(idx);
+	if (Math.abs(mousePos.y-this.mouseInit.y) > 10) {
+		this.released = true;
+	}
 	if (idx != this.idx) {
 		console.log(idx);
 		rects.moveBlock(this.idx, idx);
 	}
-	this.transform('t' + x + ',' + y);
+	if (this.released) {
+		this.transform('t' + x + ',' + y);
+	}
 	
 }
 
@@ -75,6 +85,7 @@ function onEnd() {
 	this.mouseInit = undefined;
 	this.posInit = undefined;
 	this.attr({fill:fillUnselect});
+	this.released = false;
 	this.snapToIdx();
 }
 
@@ -84,12 +95,14 @@ r.drag(onMove, onStart, onEnd);
 function createRects(pos, numRects) {
 	var width = 100;
 	var height = 40;
+	var spacing = 15;
 	var y = pos.y;
 	var rects = [];
 	for (var rectIdx=0; rectIdx<numRects; rectIdx++) {
 		var r = paper.rect(0, 0, width, height);
 		r.transform('t' + pos.x + ',' + (y+1));
 		y+=height;
+		y+=spacing;
 		r.attr(
 			{
 				fill: fillUnselect,  
@@ -100,7 +113,7 @@ function createRects(pos, numRects) {
 		)
 		r.snapToIdx = function() {
 			var x = rects.pos.x;
-			var y = this.idx*rects.height+rects.pos.y;
+			var y = rects.getY(this.idx);
 			this.animate({transform:'t' + x + ',' + y}, 250);		
 		}
 		r.drag(onMove, onStart, onEnd);
