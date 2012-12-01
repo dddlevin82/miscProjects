@@ -1,6 +1,6 @@
 <html>
 <body>
-<canvas id='myCanvas' width='100' height='100'></canvas>
+<canvas id='myCanvas' width='700' height='700'></canvas>
 <script src='../jquery-1.7.2.min.js'></script>
 <script src='../underscore-min.js'></script>
 <script src='../DrawingTools.js'></script>
@@ -10,22 +10,61 @@
 	globalMousePosLast = P(0, 0);
 	globalMousePos = P(0, 0);
 	$(document).mousemove(function(e) {
-		globalMouseLast.x = globalMousePos.x;
-		globalMouseLast.y = globalMousePos.y;
 		globalMousePos.x = e.pageX;
 		globalMousePos.y = e.pageY;
 	})
 	var canvas = document.getElementById('myCanvas');
 	var c = canvas.getContext('2d');
+	drawingTools = new DrawingTools(myCanvas, c);
 	wormies = [];
-	wormies.push(new Wormy(myCanvas, c, 10, 15, 15, Col(0, 0, 175)));
+	wormies.push(new Wormy(myCanvas, c, 10, 15, 25, Col(0, 0, 175)));
 	window.setInterval(turn, 35);
 
 	function getLocalMousePos(canvas) {
-		return P(globalMousPos.x - canvasoffsetLeft, globalMousePos.y - canvas.offsetTop);
+		return P(globalMousePos.x - canvas.offsetLeft, globalMousePos.y - canvas.offsetTop);
 	}
 	function getMouseV() {
-		return V(globalMousePos.x-globalMousePosLast.x, globalMousePos.y, globalMousePosLast.y);
+		return V(globalMousePos.x-globalMousePosLast.x, globalMousePos.y - globalMousePosLast.y);
+	}
+	function getDirDiff(a, b) {
+		if (Math.abs(a-b)<Math.PI) {
+			return Math.abs(a-b);
+		} else {
+			if (a<b) {
+				b-=2*Math.PI;
+				return a-b;
+			} else {
+				a-=2*Math.PI;
+				return b-a;
+			}
+			
+		}
+	}
+	function getDirAvg(a, b) {
+		if (Math.abs(a-b)<=Math.PI) {
+			return (a+b)/2;
+		} else {
+			if (a<b) {
+				b-=2*Math.PI;
+				var avg = (a+b)/2;
+				if (avg<0) {
+					return avg+2*Math.PI;
+				} else {
+					return avg;
+				}
+			} else {
+				b-=2*Math.PI;
+				var avg = (a+b)/2;
+				if (avg<0) {
+					return avg+2*Math.PI;
+				} else {
+					return avg;
+				}
+			}			
+		}
+	}
+	function dirToUV(a) {
+		return V(Math.cos(a), Math.sin(b));
 	}
 </script>
 </body>

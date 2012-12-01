@@ -108,7 +108,11 @@ Vector.prototype = {
 	},
 	isValid: function() {
 		return this.dx!==undefined && !isNaN(this.dx) && this.dy!==undefined && !isNaN(this.dy);
-	}
+	},
+	zero: function() {
+		this.dx = 0;
+		this.dy = 0;
+	},
 }
 Color.prototype = {
 	adjust: function(dr, dg, db){
