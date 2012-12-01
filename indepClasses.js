@@ -213,6 +213,12 @@ Point.prototype = {
 		//}
 		return this;
 	},
+	moveAlongUV: function(UV, dist) {
+		var v = UV.copy().mult(dist);
+		this.x+=v.dx;
+		this.y+=v.dy;
+		return this;
+	},
 	position: function(p){
 		if(p.x!==undefined){
 			this.x=p.x;
