@@ -18,6 +18,7 @@
 	drawingTools = new DrawingTools(myCanvas, c);
 	wormies = [];
 	wormies.push(new Wormy(myCanvas, c, 10, 15, 25, Col(0, 0, 175)));
+	wormies.push(new Wormy(myCanvas, c, 10, 15, 25, Col(0, 100, 175)));
 	window.setInterval(turn, 35);
 
 	function getLocalMousePos(canvas) {

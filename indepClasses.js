@@ -31,8 +31,8 @@ function Col(r, g, b){
 }
 
 Vector.prototype = {
-	UV: function(){
-		var mag = this.mag();
+	UV: function() {
+		var mag = Math.sqrt(this.dx*this.dx + this.dy*this.dy)
 		return V(this.dx/mag, this.dy/mag);
 	},
 	mag: function(){
@@ -179,6 +179,11 @@ Point.prototype = {
 		var dx = this.x-pTo.x;
 		var dy = this.y-pTo.y;
 		return Math.sqrt(dx*dx + dy*dy);
+	},
+	distSqrTo: function(b) {
+		var dx = this.x-b.x;
+		var dy = this.y-b.y;
+		return dx*dx + dy*dy;
 	},
 	VTo: function(b){
 		return V(b.x-this.x, b.y-this.y);

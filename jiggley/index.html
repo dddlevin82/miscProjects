@@ -1,0 +1,30 @@
+<html>
+<body>
+<canvas id='myCanvas' width='700' height='700'></canvas>
+<script src='../jquery-1.7.2.min.js'></script>
+<script src='../underscore-min.js'></script>
+<script src='../DrawingTools.js'></script>
+<script src='../indepClasses.js'></script>
+<script src='jiggley.js'></script>
+<script>
+	globalMousePosLast = P(0, 0);
+	globalMousePos = P(0, 0);
+	$(document).mousemove(function(e) {
+		globalMousePos.x = e.pageX;
+		globalMousePos.y = e.pageY;
+	})
+	var canvas = document.getElementById('myCanvas');
+	var c = canvas.getContext('2d');
+	drawingTools = new DrawingTools(myCanvas, c);
+
+
+	function getLocalMousePos(canvas) {
+		return P(globalMousePos.x - canvas.offsetLeft, globalMousePos.y - canvas.offsetTop);
+	}
+	function getMouseV() {
+		return V(globalMousePos.x-globalMousePosLast.x, globalMousePos.y - globalMousePosLast.y);
+	}
+
+</script>
+</body>
+</html>
