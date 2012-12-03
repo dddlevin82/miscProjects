@@ -7,6 +7,7 @@
 <script src='../indepClasses.js'></script>
 <script src='jiggley.js'></script>
 <script>
+	var timeStep = 10;
 	globalMousePosLast = P(0, 0);
 	globalMousePos = P(0, 0);
 	$(document).mousemove(function(e) {
@@ -16,7 +17,8 @@
 	var canvas = document.getElementById('myCanvas');
 	var c = canvas.getContext('2d');
 	drawingTools = new DrawingTools(myCanvas, c);
-
+	jigglies = [];
+	jigglies.push(new Jiggley(myCanvas, c, 200, Col(0, 0, 255)));
 
 	function getLocalMousePos(canvas) {
 		return P(globalMousePos.x - canvas.offsetLeft, globalMousePos.y - canvas.offsetTop);
@@ -24,7 +26,7 @@
 	function getMouseV() {
 		return V(globalMousePos.x-globalMousePosLast.x, globalMousePos.y - globalMousePosLast.y);
 	}
-
+	window.setInterval('turn()', 10);
 </script>
 </body>
 </html>

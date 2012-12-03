@@ -1,6 +1,11 @@
 
 function turn() {
-
+	for (var jiggleyIdx=0; jiggleyIdx<jigglies.length; jiggleyIdx++) {
+		drawingTools.clear(Col(255,255,255));
+		jigglies[jiggleyIdx].turn();
+	}
+	globalMousePosLast.x =  globalMousePos.x;
+	globalMousePosLast.y =  globalMousePos.y;
 }
 
 
@@ -9,35 +14,82 @@ function Jiggley(canvasElement, drawCanvas, rCircle, fillCol) {
 	this.c = drawCanvas;
 	this.k = 5;
 	this.m = 5;
+	this.ptsPerBlock = 10;
 	this.drawingTools = new DrawingTools(this.cElement, this.c);
 	this.rCircle = rCircle;
 	this.fillCol = fillCol;
-	this.pxPerPt = 10;
+	this.pxPerPt = 20;
 	this.center = P(this.rCircle, this.rCircle);
 	this.sideLen = 2*this.rCircle;
 	this.ptsPerRow = Math.round(this.sideLen/this.pxPerPt) + 1;
-	
 	this.nodes = this.defineNodes();
-	this.lines = this.defineSprings(this.nodes);
+	this.springs = this.defineSprings(this.nodes);
+	this.tapThresholdSqr = 25;
+	this.flattenNodes();
 }
 
 Jiggley.prototype = {
+	turn: function() {
+		this.applySpringForce();
+		this.moveNodes();
+		this.checkCollisions();
+		this.draw();
+	},
 	draw: function() {
-		var lines = this.lines;
-		for (var lineIdx=0; lineIdx<lines.length; lineIdx++) {
-			this.drawingTools.line(lines[lineIdx].a, lines[lineIdx].b, this.fillCol);
+		var springs = this.springs;
+		for (var springIdx=0; springIdx<springs.length; springIdx++) {
+			this.drawingTools.line(springs[springIdx].a, springs[springIdx].b, this.fillCol);
+		}
+	},
+	applySpringForce: function() {
+		var delT = timeStep/1000;
+		var springs = this.springs;
+		for (var springIdx=0; springIdx<springs.length; springIdx++) {
+			var spring = springs[springIdx];
+			var vTo = spring.a.VTo(spring.b);
+			var dist = vTo.mag();
+			var f = (dist-spring.lo)*spring.k;
+			var UV = V(vTo.dx/dist, vTo.dy/dist);
+			//fdelT = mdelV
+			spring.a.dx += UV.dx*f*delT/spring.a.m;
+			spring.a.dy += UV.dy*f*delT/spring.a.m;
+			
+			spring.b.dx -= UV.dx*f*delT/spring.b.m;
+			spring.b.dy -= UV.dy*f*delT/spring.b.m;
+		}
+	},
+	checkCollisions: function() {
+		var nodes = this.nodes;
+		var mousePos = getLocalMousePos(this.cElement);
+		var mouseV = getMouseV();
+		var mouseX = mousePos.x;
+		var mouseY = mousePos.y;
+		for (var nodeIdx=0; nodeIdx<nodes.length; nodeIdx++) {
+			var dx = nodes[nodeIdx].x - mouseX;
+			var dy = nodes[nodeIdx].y - mouseY;
+			if (dx*dx + dy*dy < this.tapThresholdSqr) {
+				nodes[nodeIdx].dx = -nodes[nodeIdx].dx + 2*mouseV.dx;
+				nodes[nodeIdx].dy = -nodes[nodeIdx].dy + 2*mouseV.dy;
+			}
+		}		
+	},
+	moveNodes: function() {
+		var nodes = this.nodes;
+		for (var nodeIdx=0; nodeIdx<nodes.length; nodeIdx++) {
+			nodes[nodeIdx].x += nodes[nodeIdx].dx;
+			nodes[nodeIdx].y += nodes[nodeIdx].dy;
+			nodes[nodeIdx].dx*=.99;
+			nodes[nodeIdx].dy*=.99;
 		}
 	},
 	defineNodes: function() {
-		
-		var ptsPerBlock = 10;
 		var nodes = this.makeBlankGrid(this.ptsPerRow);
-		var numBlocks = Math.ceil(this.ptsPerRow/ptsPerBlock);
+		var numBlocks = Math.ceil(this.ptsPerRow/this.ptsPerBlock);
 		for (var blockIdxX=0; blockIdxX<numBlocks; blockIdxX++) {
 			for (var blockIdxY=0; blockIdxY<numBlocks; blockIdxY++) {
 				
-				for (var xIdx=blockIdxX*ptsPerBlock; xIdx<this.ptsPerRow; xIdx++) {
-					for (var yIdx=blockIdxY*ptsPerBlock; yIdx<this.ptsPerRow; yIdx++) {
+				for (var xIdx=blockIdxX*this.ptsPerBlock; xIdx<this.ptsPerRow; xIdx++) {
+					for (var yIdx=blockIdxY*this.ptsPerBlock; yIdx<this.ptsPerRow; yIdx++) {
 						var node = new Node(xIdx*this.pxPerPt, yIdx*this.pxPerPt, this.m);
 						if (this.center.distSqrTo(node) <= this.rCircle*this.rCircle) {
 							nodes[xIdx][yIdx] = node;
@@ -68,7 +120,7 @@ Jiggley.prototype = {
 					for (var dy=-1; dy<=1; dy++) {
 						var dir = V(dx, dy);
 						if ((dir.dx!=0 || dir.dy!=0) && this.canMakeSpring(idx, nodes, springsTaken, dir)) {
-							springs.push(new Spring(nodes[x][y], nodes[x+dir.dx][y+dir.dy], dir.mag(), this.k));
+							springs.push(new Spring(nodes[x][y], nodes[x+dir.dx][y+dir.dy], this.pxPerPt*dir.mag(), this.k));
 							springsTaken[x][y][dir.dx][dir.dy] = true;
 							springsTaken[x+dir.dx][y+dir.dy][-dir.dx][-dir.dy] = true;
 							borderPtIdxs.push({xIdx:x+dir.dx, yIdx:y+dir.dy});
@@ -136,7 +188,33 @@ Jiggley.prototype = {
 			}
 		}
 	},
-	
+	flattenNodes: function() {
+		var nodes = this.nodes;
+		var flattened = [];
+		for (var xIdx=0; xIdx<nodes.length; xIdx++) {
+			for (var yIdx=0; yIdx<nodes[0].length; yIdx++) {
+				if (nodes[xIdx][yIdx]) {
+					flattened.push(nodes[xIdx][yIdx]);
+				}
+			}
+		}
+		/*
+		var numBlocks = Math.ceil(this.ptsPerRow/this.ptsPerBlock);		
+		for (var blockIdxX=0; blockIdxX<numBlocks; blockIdxX++) {
+			for (var blockIdxY=0; blockIdxY<numBlocks; blockIdxY++) {
+				for (var xIdx=blockIdxX*this.ptsPerBlock; xIdx<this.ptsPerRow; xIdx++) {
+					for (var yIdx=blockIdxY*this.ptsPerBlock; yIdx<this.ptsPerRow; yIdx++) {
+						if (nodes[xIdx][yIdx]) {
+							flattened.push(nodes[xIdx][yIdx]);
+						}
+					}
+				}
+				
+			}
+		}
+		*/
+		this.nodes = flattened;
+	},
 	
 	makeBlankGrid: function(ptsPerRow) {
 		var blankList = new Array(ptsPerRow);
