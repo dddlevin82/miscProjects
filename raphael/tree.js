@@ -1,13 +1,15 @@
 function Tree(paper, pos) {
 	this.paper = paper;
-	this.pos = pos;
+	this.pos = pos; //upper left corner of first section
 	this.blockHeight = 40;
 	this.blockWidth = 100;
 	this.blockSpacing = 10;
+	this.totalBlockHeight = this.blockHeight + this.blockSpacing;
 	this.promptIndent = 25;
-	this.blockCol = '#64a0c1';
-	this.blockColHover = '#5c93b2';
-	this.blockColSelect = '#526c7a';
+	this.blockCol = Col(100,160,193);//'#64a0c1';
+	this.blockColHover = Col(92, 147, 178);//'#5c93b2';
+	this.blockColSelect = Col(82,108,122);//'#526c7a';
+	this.blockColStroke = Col(59,68,73);//'#3b4449';
 	this.sections = [];
 	
 }
@@ -28,9 +30,23 @@ Tree.prototype = {
 		this.sections[sectionIdx].addPrompt(pos);
 		this.animateAllToPositions();
 	},
+	moveSection: function(srcIdx, destIdx) {
+		
+	},
+	movePrompt: function(srcSectionIdx, destSectionIdx, srcPromptIdx, destPromptIdx) {
+	
+	},
+	removeSection: function(sectionIdx) {
+		
+	},
+	removePrompt: function(sectionIdx, promptIdx) {
+	
+	},
 	getNewSectionIdx: function(pos) {
+		var y = this.pos.y;
 		for (var sectionIdx=0; sectionIdx<this.sections.length; sectionIdx++) {
-			if (this.sections[sectionIdx].pos.y > pos.y) {
+			var sectionHeight = this.sections[sectionIdx].totalHeight();
+			if (y + sectionHeight/2 > pos.y) {
 				return sectionIdx;
 			}
 		}
@@ -39,29 +55,94 @@ Tree.prototype = {
 	getNewPromptSectionIdx: function(pos) {
 		
 	},
-}
-
-function Section(idx, tree) {
-	this.idx = idx;
-	this.tree = tree;
-	this.prompts = [];
-}
-
-Section.prototype = {
-	addPrompt: function(releasePos) {
-		
-	},
-	getNewPromptIdx: function(releasePos) {
-		
+	animateAllToPositions: function() {
+		for (var sectionIdx=0; sectionIdx<this.sections.length; sectionIdx++) {
+			this.sections[sectionIdx].animateTo(sectionIdx);
+		}
 	}
 }
 
-function Block() {
-
+function TreeSection(idx, tree) {
+	this.idx = idx;
+	this.tree = tree;
+	this.prompts = [];
+	this.buttom = makeTreeButton(tree, SOMEPOS, 
 }
 
-Block.prototype = {
+TreeSection.prototype = {
+	addPrompt: function(releasePos) {
+		
+	},
+	animateTo: function(sectionIdx) {
+		if (this.idx != sectionIdx) {
+			this.
+		}
+	}
+	getNewPromptIdx: function(releasePos) {
+		
+	}
+	totalHeight: function() {
+		return this.tree.totalBlockHeight*(1+this.prompts.length);
+	}
+}
 
+function TreePrompt(idx, parent) {
+	this.idx = idx;
+}
+
+function makeTreeButton(tree, sectionIdx, promptIdx, dragFuncs, onClick) {
+	var r = paper.rect(0, 0, tree.blockWidth, tree.blockHeight);
+	r.transform('t' + pos.x + ',' + pos.y);
+	r.attr(
+		{
+			fill: tree.blockCol.hex,
+			stroke: tree.blockColStroke.hex,
+			'stroke-width': 5,
+			'stroke-linejoin': 'round',
+		}
+	var getSectionPos = function(sectionIdx) {
+		var y = tree.pos.y;
+		for (var treeSectionIdx=0; treeSectionIdx<sectionIdx; treeSectionIdx++) {
+			y += tree.sections[treeSectionIdx].totalHeight();
+		}
+		return y;
+	}
+	r.snapToIdx = function(sectionIdx, promptIdx) {
+		var sectionY = getSectionPos(sectionIdx);
+		if (promptIdx === undefined) {
+			var x = tree.pos.x;
+			var y = sectionY;
+		} else {
+			var x = tree.pos.x + tree.promptIndent;
+			var y = sectionY + (promptIdx+1) * (tree.blockHeight + tree.blockSpacing);//+1 to account for section block, yo
+		}
+		this.transform('t' + x + ',' + y);
+		this.sectionIdx = sectionIdx;
+		this.promptIdx = promptIdx;
+		this.pos.x = x;
+		this.pos.y = y;
+	}
+	r.animateToIdx = function(sectionIdx, promptIdx) {
+		var sectionY = getSectionPos(sectionIdx);
+		if (promptIdx === undefined) {
+			var x = tree.pos.x;
+			var y = sectionY;
+		} else {
+			var x = tree.pos.x + tree.promptIndent;
+			var y = sectionY + (promptIdx+1) * (tree.blockHeight + tree.blockSpacing);//+1 to account for section block, yo
+		}
+		if (x!=this.pos.x || y!=this.pos.y) {
+			this.animate({tramsform:'t' + x + ',' + y}, 250);
+		}
+		this.sectionIdx = sectionIdx;
+		this.promptIdx = promptIdx;
+		this.pos.x = x;
+		this.pox.y = y;
+	}
+	//r.drag(dragFuncs.onMove, dragFuncs.onStart, dragFuncs.onEnd);
+	r.pos = P(0,0);
+	r.snapToIdx(sectionIdx, promptIdx);
+	return {rect:r};
 }
 
 function posOnPaper(mousePos, paper) {
