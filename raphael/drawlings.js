@@ -1,4 +1,3 @@
-var paper = Raphael(0, 0, 420, 400);
 
 var r = paper.rect(0, 0, 100, 40, 5);
 //r.attr('fill', '#f00');

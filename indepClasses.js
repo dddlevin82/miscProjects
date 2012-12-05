@@ -302,6 +302,10 @@ Point.prototype = {
 	sameAs: function(b) {
 		return (this.x==b.x && this.y==b.y);
 	},
+	set: function(b) {
+		this.x = b.x;
+		this.y = b.y;
+	},
 	closeTo: function(b) {
 		return Math.abs(this.x-b.x)<1 && Math.abs(this.y-b.y)<1;
 	},
