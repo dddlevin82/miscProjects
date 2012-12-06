@@ -100,6 +100,7 @@ Tree.prototype = {
 		this.parent.sectionYs = this.parent.tree.getSectionYs();
 	},
 	sectionDragMove: function() {
+		var sections = this.parent.tree.sections;
 		var curSectionIdx = this.parent.sectionIdx;
 		var mousePos = posOnPaper(globalMousePos, this.parent.tree.paper);
 		var dPos = V(mousePos.x - this.parent.mousePos.x, mousePos.y- this.parent.mousePos.y);
@@ -109,28 +110,27 @@ Tree.prototype = {
 		this.parent.mousePos.set(mousePos);
 		var sectionYs = this.parent.sectionYs;
 		for (var sectionIdx=0; sectionIdx<sectionYs.length; sectionIdx++) {
-			var midPtY = sectionYs[sectionIdx] + this.parent.tree.sections[sectionIdx].totalHeight()/2;
+			var midPtY = sectionYs[sectionIdx] + sections[sectionIdx].totalHeight()/2;
 			if (sectionIdx < curSectionIdx) {
-				if (pos.y < midPtY) {
+				if (pos.y <= midPtY) {
 					var newSectionIdx = sectionIdx;
 					break;
 				}
 			} else if (sectionIdx > curSectionIdx) {
-				if (pos.y + sectionHeight > midPtY) {
+				if (pos.y + sectionHeight >= midPtY) {
 					var newSectionIdx = sectionIdx;
 					break;
 				}
 			}
 		}
 		
-		//if (nextSectionIdx === undefined) {
-		//	nextSectionIdx = curSectionIdx;
-		//}
-		if (newSectionIdx !== undefined) {//(nextSectionIdx != this.parent.sectionIdx) {
-			var a = this.parent.tree.sections[this.parent.sectionIdx];
-			var b = this.parent.tree.sections[newSectionIdx];
-			this.parent.tree.sections[this.parent.sectionIdx] = b;
-			this.parent.tree.sections[newSectionIdx] = a;
+		if (newSectionIdx !== undefined) {
+			var oldSectionIdx = this.parent.sectionIdx;
+			var old = sections[oldSectionIdx];
+			sections.splice(oldSectionIdx, 1);
+			sections.splice(newSectionIdx, 0, old);
+			this.parent.sectionYs = this.parent.tree.getSectionYs();
+			this.parent.tree.sections = sections;
 			this.parent.sectionIdx = newSectionIdx;
 			this.parent.tree.moveAllToPositions('fly');
 		}
@@ -149,6 +149,34 @@ Tree.prototype = {
 			onMove: this.sectionDragMove,
 			onEnd: this.sectionDragEnd
 		}
+	},
+	promptDragStart: function() {
+		this.parent.tree.clickedButton = this.parent;
+		this.parent.promptIdx = this.parent.section.getPromptIdx(this.parent.parent);
+		this.parent.mousePos = posOnPaper(globalMousePos, this.parent.tree.paper);
+		this.parent.sectionYs = this.parent.tree.getSectionYs();
+		this.parent.sectionTop = this.parent.section.pos.y;
+		this.parent.sectionBottom = this.parent.sectionTop + this.parent.section.totalHeight();
+	},
+	promptDragMove: function() {
+		var prompts = this.parent.section.prompts;
+		var totalRectHeight = this.parent.tree.totalRectHeight;
+		var pos = this.parent.pos;
+		var curPromptY = this.sectionTop + this.parent.tree.totalBlockHeight;
+		var newIdx = Math.floor((pos.y + totalRectHeight/2)/totalRectHeight);
+		var boundedIdx = Math.min(prompts.length-1, Math.max(-1, newIdx));
+		var switchingBlock = newIdx != boundedIdx;
+		if (newIdx != this.parent.promptIdx && !switchingBlock) {
+			newIdx = Math.max(0, newIdx); //because it can be -1, which is on the section button, but still in the section
+			this.parent.tree.clickedButton = undefined;
+			this.parent.sectionIdx = undefined;
+			this.parent.mousePos = P(0, 0);
+			this.parent.sectionYs = [];
+			this.parent.tree.moveAllToPositions('fly');
+		}
+	},
+	promptDragEnd: function() {
+	
 	},
 	definePromptDragFuncs: function() {
 		this.promptDragFuncs = {
@@ -234,6 +262,9 @@ TreeSection.prototype = {
 			y += this.tree.totalBlockHeight;
 		}		
 		return this.prompts.length;
+	},
+	getPromptIdx: function(prompt) {
+		return this.prompts.indexOf(prompt);
 	},
 	remove: function() {
 		this.button.remove();
