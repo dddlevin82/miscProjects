@@ -7,6 +7,7 @@ function Tree(paper, pos) {
 	this.circleRad = 15;
 	this.blockSpacing = 10;
 	this.totalBlockHeight = this.rectDims.dy + this.blockSpacing;
+	this.buttonPosObjectModeSelected = P(10, 10);
 	this.promptIndent = 30;
 	this.rectRounding = 3;
 	this.innerRectWidth = 25;
@@ -15,20 +16,21 @@ function Tree(paper, pos) {
 	this.arrowSpacing = 3;
 	this.arrowOffset = 5;
 	this.numArrows = 2;
+	this.snapDist = 5;
 	this.rectCol = Col(0, 164, 255);//'#64a0c1';
 	this.rectColHover = Col(0, 144, 224);//'#5c93b2';
 	//this.rectColSelect = Col(82, 108, 122);//'#526c7a';
 	//this.rectColStroke = Col(59, 68, 73);//'#3b4449';
-	this.arrowCol = Col(0, 255, 255);
+	this.arrowCol = Col(255, 255, 255);
 	//this.circleCol = Col(59, 68, 73);//Col(120, 180, 213);
 	//this.circleColHover = Col(110, 170, 203);
 	this.placerButtonPos = P(200, 300);
 	this.defineSectionDragFuncs();
 	this.definePromptDragFuncs();
+	this.defineClickFuncs();
 	this.placerButton = this.makePlacerButton();
 	this.clickedButton = undefined;
 	this.sections = [];
-	//be like inner = paper.rect(70% over in main rect, round 3,) fill with circleCol.  Put arrows like >> or << of big rect color on it
 }
 
 Tree.prototype = {
@@ -37,7 +39,7 @@ Tree.prototype = {
 		var sectionIdx = this.getNewSectionIdx(pos);
 		if (!section) {
 		/*should make it send rectangle corner positions*/
-			section = new TreeSection(this, pos/*GET A POINT FOR THE UPPER LEFT CORNER, NOT FOR MOUSEPOS*/, this.sectionDragFuncs,  this.promptDragFuncs, undefined);
+			section = new TreeSection(this, pos/*GET A POINT FOR THE UPPER LEFT CORNER, NOT FOR MOUSEPOS*/, this.sectionDragFuncs,  this.promptDragFuncs, this.clickFuncs);
 		}
 		this.sections.splice(sectionIdx, 0, section);
 		//for (var idx=sectionIdx+1; idx<this.sections.length; idx++) {
@@ -51,31 +53,29 @@ Tree.prototype = {
 		this.sections[sectionIdx].addPrompt(pos, prompt);
 		this.moveAllToPositions('fly');
 	},
-	toObjectEditorMode: function() {
+	toObjectMode: function() {
 		for (var sectionIdx=0; sectionIdx<this.sections.length; sectionIdx++) {
 			var section = this.sections[sectionIdx];
 			section.button.toObjectMode();
 			var prompts = section.prompts;
 			for (var promptIdx=0; promptIdx<prompts.length; promptIdx++) {
-				prompt.buttom.toObjectMode();
+				prompts[promptIdx].button.toObjectMode();
 			}
-			
-		//check if button is selected in toObjectMode
 		}
 	},
 
 	toTreeMode: function() {
-		this.moveAllToPositions('fly');
+		this.unclickButton();
 		for (var sectionIdx=0; sectionIdx<this.sections.length; sectionIdx++) {
 			var section = this.sections[sectionIdx];
 			section.button.toTreeMode();
 			var prompts = section.prompts;
 			for (var promptIdx=0; promptIdx<prompts.length; promptIdx++) {
-				prompt.buttom.toTreeMode();
+				prompts[promptIdx].button.toTreeMode();
 			}
-			
 		//to object mode moves each button.  to tree mode gets moved by the moveAllToPositions function.  This is an acceptable inconsistancy because the buttons don't individually know where to go in to tree mode
 		}
+		this.moveAllToPositions('fly');
 	},
 	removeSection: function(sectionIdx) {
 		if (this.sections[sectionIdx]) {
@@ -90,6 +90,9 @@ Tree.prototype = {
 	removePrompt: function(sectionIdx, promptIdx) {
 		this.sections[sectionIdx].removePrompt(promptIdx);
 		this.moveAllToPositions('fly');
+	},
+	unclickButton: function() {
+		this.clickedButton = undefined;
 	},
 	getNewSectionIdx: function(pos) {
 		var y = this.pos.y;
@@ -122,55 +125,71 @@ Tree.prototype = {
 		return this.sections.indexOf(section);
 	},
 	//drag and click functions are in context of the rect or circle.  this.parent will reference the button object.
+	//yeah dawg, but pass the click functions down
 	sectionDragStartTreeMode: function() {
+		this.parent.posO = posOnPaper(globalMousePos, this.parent.tree.paper);
+		this.parent.released = false;
 		this.parent.tree.clickedButton = this.parent;
 		this.parent.sectionIdx = this.parent.tree.getSectionIdx(this.parent.parent);
 		this.parent.mousePos = posOnPaper(globalMousePos, this.parent.tree.paper);
 		this.parent.sectionYs = this.parent.tree.getSectionYs();
 	},
 	sectionDragMoveTreeMode: function() {
-		var sections = this.parent.tree.sections;
-		var curSectionIdx = this.parent.sectionIdx;
 		var mousePos = posOnPaper(globalMousePos, this.parent.tree.paper);
-		var dPos = V(mousePos.x - this.parent.mousePos.x, mousePos.y- this.parent.mousePos.y);
-		this.parent.parent.move(dPos);
-		var pos = this.parent.pos;
-		var sectionHeight = this.parent.parent.totalHeight();
-		this.parent.mousePos.set(mousePos);
-		var sectionYs = this.parent.sectionYs;
-		for (var sectionIdx=0; sectionIdx<sectionYs.length; sectionIdx++) {
-			var midPtY = sectionYs[sectionIdx] + sections[sectionIdx].totalHeight()/2;
-			if (sectionIdx < curSectionIdx) {
-				if (pos.y <= midPtY) {
-					var newIdx= sectionIdx;
-					break;
-				}
-			} else if (sectionIdx > curSectionIdx) {
-				if (pos.y + sectionHeight >= midPtY) {
-					var newIdx = sectionIdx;
-					break;
+		var dPos = this.parent.mousePos.VTo(mousePos);
+		var distFromOSqr = this.parent.posO.VTo(mousePos).magSqr();
+		if (distFromOSqr > this.parent.tree.snapDist*this.parent.tree.snapDist || this.parent.released) {
+			this.parent.released = true;
+			var sections = this.parent.tree.sections;
+			var curSectionIdx = this.parent.sectionIdx;
+			this.parent.parent.move(dPos);
+			var pos = this.parent.pos;
+			var sectionHeight = this.parent.parent.totalHeight();
+			this.parent.mousePos.set(mousePos);
+			var sectionYs = this.parent.sectionYs;
+			for (var sectionIdx=0; sectionIdx<sectionYs.length; sectionIdx++) {
+				var midPtY = sectionYs[sectionIdx] + sections[sectionIdx].totalHeight()/2;
+				if (sectionIdx < curSectionIdx) {
+					if (pos.y <= midPtY) {
+						var newIdx= sectionIdx;
+						break;
+					}
+				} else if (sectionIdx > curSectionIdx) {
+					if (pos.y + sectionHeight >= midPtY) {
+						var newIdx = sectionIdx;
+						break;
+					}
 				}
 			}
-		}
-		
-		if (newIdx !== undefined) {
-			var oldIdx = this.parent.sectionIdx;
-			var movingSection = sections[oldIdx];
-			sections.splice(oldIdx, 1);
-			sections.splice(newIdx, 0, movingSection);
-			this.parent.sectionYs = this.parent.tree.getSectionYs();
-			this.parent.tree.sections = sections;
-			this.parent.sectionIdx = newIdx;
-			this.parent.tree.moveAllToPositions('fly');
+			
+			if (newIdx !== undefined) {
+				var oldIdx = this.parent.sectionIdx;
+				var movingSection = sections[oldIdx];
+				sections.splice(oldIdx, 1);
+				sections.splice(newIdx, 0, movingSection);
+				this.parent.sectionYs = this.parent.tree.getSectionYs();
+				this.parent.tree.sections = sections;
+				this.parent.sectionIdx = newIdx;
+				this.parent.tree.moveAllToPositions('fly');
+			}
 		}
 		
 	},
 	sectionDragEndTreeMode: function() {
+		var didClickFunc = false;
+		if (!this.parent.released && this.parent.clickFuncs) {
+			didClickFunc = true;
+			this.parent.clickFuncs[this.type][this.parent.mode].apply(this.parent);
+		}
 		this.parent.tree.clickedButton = undefined;
 		this.parent.sectionIdx = undefined;
+		this.parent.released = false;
+		this.parent.posO = P(0, 0);
 		this.parent.mousePos = P(0, 0);
 		this.parent.sectionYs = [];
-		this.parent.tree.moveAllToPositions('fly');
+		if (!didClickFunc) {
+			this.parent.tree.moveAllToPositions('fly');
+		}
 	},
 	defineSectionDragFuncs: function() {
 		this.sectionDragFuncs = {
@@ -187,7 +206,10 @@ Tree.prototype = {
 		}
 		
 	},
+	//click functions go in here, dawg
 	promptDragStartTreeMode: function() {
+		this.parent.posO = posOnPaper(globalMousePos, this.parent.tree.paper);
+		this.parent.released = false;
 		this.parent.tree.clickedButton = this.parent;
 		this.parent.promptIdx = this.parent.parent.section.getPromptIdx(this.parent.parent);
 		this.parent.mousePos = posOnPaper(globalMousePos, this.parent.tree.paper);
@@ -198,34 +220,47 @@ Tree.prototype = {
 	promptDragMoveTreeMode: function() {
 		var mousePos = posOnPaper(globalMousePos, this.parent.tree.paper);
 		var dPos = V(mousePos.x - this.parent.mousePos.x, mousePos.y- this.parent.mousePos.y);
-		this.parent.mousePos.set(mousePos);
-		this.parent.parent.move(dPos);
-		var prompts = this.parent.parent.section.prompts;
-		var totalBlockHeight = this.parent.tree.totalBlockHeight;
-		var pos = this.parent.pos;
-		var topOfPrompts = this.parent.sectionTop + totalBlockHeight;
-		var newIdx = Math.floor(((pos.y + totalBlockHeight/2 - topOfPrompts)/totalBlockHeight));
-		var boundedIdx = Math.min(prompts.length-1, Math.max(-1, newIdx));
-		var switchingBlock = newIdx != boundedIdx;
-		if (newIdx != this.parent.promptIdx && !switchingBlock) {
-			var movingPrompt = prompts[this.parent.promptIdx];
-			newIdx = Math.max(0, newIdx); //because it can be -1, which is on the section button, but still in the section
-			prompts.splice(this.parent.promptIdx, 1);
-			prompts.splice(newIdx, 0, movingPrompt);
-			this.parent.promptIdx = newIdx;
-			this.parent.tree.moveAllToPositions('fly');
-		} else if (switchingBlock) {
-			
+		var distFromOSqr = this.parent.posO.VTo(mousePos).magSqr();
+		if (distFromOSqr > this.parent.tree.snapDist*this.parent.tree.snapDist || this.parent.released) {
+			this.parent.released = true;
+			this.parent.mousePos.set(mousePos);
+			this.parent.parent.move(dPos);
+			var prompts = this.parent.parent.section.prompts;
+			var totalBlockHeight = this.parent.tree.totalBlockHeight;
+			var pos = this.parent.pos;
+			var topOfPrompts = this.parent.sectionTop + totalBlockHeight;
+			var newIdx = Math.floor(((pos.y + totalBlockHeight/2 - topOfPrompts)/totalBlockHeight));
+			var boundedIdx = Math.min(prompts.length-1, Math.max(-1, newIdx));
+			var switchingBlock = newIdx != boundedIdx;
+			if (newIdx != this.parent.promptIdx && !switchingBlock) {
+				var movingPrompt = prompts[this.parent.promptIdx];
+				newIdx = Math.max(0, newIdx); //because it can be -1, which is on the section button, but still in the section
+				prompts.splice(this.parent.promptIdx, 1);
+				prompts.splice(newIdx, 0, movingPrompt);
+				this.parent.promptIdx = newIdx;
+				this.parent.tree.moveAllToPositions('fly');
+			} else if (switchingBlock) {
+				
+			}
 		}
 	},
 	promptDragEndTreeMode: function() {
+		var didClickFunc = false;
+		if (!this.parent.released && this.parent.clickFuncs) {
+			didClickFunc = true;
+			this.parent.clickFuncs[this.type][this.parent.mode].apply(this.parent);
+		}//might want to save these variables for use in the click function
+		//also, if we're doing the click function, it means we didn't move any blocks, so we don't have to rearrange
 		this.parent.tree.clickedButton = undefined;
 		this.parent.promptIdx = undefined;
+		this.parent.released = false;
 		this.parent.mousePos = P(0, 0);
 		this.parent.sectionYs = undefined;
 		this.parent.sectionTop = undefined;
 		this.parent.sectionBottom = undefined;	
-		this.parent.tree.moveAllToPositions('fly');
+		if (!didClickFunc) {
+			this.parent.tree.moveAllToPositions('fly');
+		}
 	},
 	definePromptDragFuncs: function() {
 		this.promptDragFuncs = {
@@ -241,19 +276,29 @@ Tree.prototype = {
 			}
 		}
 	},
+	defineClickFuncs: function() {
+		this.clickFuncs = {
+			rect: {
+				tree: this.onClickRectTreeMode,
+				object: this.onClickRectObjectMode
+			},
+			arrows: {
+				tree: this.onClickArrowsTreeMode,
+				object: this.onClickArrowsObjectMode
+			}
+		}
+	},
 	onClickRectTreeMode: function() {
 		console.log("I'm a rectangle!");
 	},
 	onClickRectObjectMode: function() {
 		console.log("I'm a rectangle!");
 	},
-	onClickCircleTreeMode: function() {
-		this.parent.tree.clickedButton = this.parent;
-		this.parent.tree.toObjectEditorMode();
+	onClickArrowsObjectMode: function() {
+		this.parent.tree.toTreeMode();
 	},
-	onClickCircleObjectMode: function() {
-		this.parent.tree.clickedButton = this.parent;
-		this.parent.tree.toObjectEditorMode();
+	onClickArrowsTreeMode: function() {
+		this.parent.tree.toObjectMode();
 	},
 	getSectionYs: function() {
 		var y = this.pos.y;
@@ -299,7 +344,7 @@ Tree.prototype = {
 
 }
 
-function TreeSection(tree, posInit, sectionDragFuncs, promptDragFuncs, onClick) {
+function TreeSection(tree, posInit, sectionDragFuncs, promptDragFuncs, clickFuncs) {
 	this.tree = tree;
 	this.prompts = [];
 	this.pos = posInit.copy();
@@ -308,7 +353,8 @@ function TreeSection(tree, posInit, sectionDragFuncs, promptDragFuncs, onClick) 
 	this.sectionYs = []; //for dragging
 	this.sectionDragFuncs = sectionDragFuncs;
 	this.promptDragFuncs = promptDragFuncs;
-	this.button = new TreeButton(this.tree, this, this.pos, sectionDragFuncs, onClick);
+	this.clickFuncs = clickFuncs;
+	this.button = new TreeButton(this.tree, this, this.pos, this.sectionDragFuncs, this.clickFuncs);
  
 }
 
@@ -316,7 +362,7 @@ TreeSection.prototype = {
 	addPrompt: function(releasePos, prompt) {
 		var newIdx = this.getNewPromptIdx(releasePos);
 		if (!prompt) {
-			prompt = new TreePrompt(this.tree, this, releasePos, this.promptDragFuncs)
+			prompt = new TreePrompt(this.tree, this, releasePos, this.promptDragFuncs, this.clickFuncs)
 		}
 		this.prompts.splice(newIdx, 0, prompt);
 	},
@@ -367,10 +413,12 @@ TreeSection.prototype = {
 	}
 }
 
-function TreePrompt(tree, section, posInit, dragFuncs, onClick) {
+function TreePrompt(tree, section, posInit, dragFuncs, clickFuncs) {
 	this.tree = tree;
 	this.section = section;
-	this.button = new TreeButton(this.tree, this, posInit, dragFuncs, undefined);
+	this.dragFuncs = dragFuncs;
+	this.clickFuncs = clickFuncs;
+	this.button = new TreeButton(this.tree, this, posInit, this.dragFuncs, this.clickFuncs);
 }
 
 TreePrompt.prototype = {
@@ -391,24 +439,41 @@ TreePrompt.prototype = {
 	}
 }
 
-function TreeButton(tree, parent, posInit, dragFuncs, onClick) {
+function TreeButton(tree, parent, posInit, dragFuncs, clickFuncs) {
 	this.tree = tree;
+	this.mode = 'tree';
 	this.pos = posInit.copy();
 	this.dragFuncs = dragFuncs;
-	this.onClick = onClick;
+	this.clickFuncs = clickFuncs;
+	this.released = false;
+	this.posO = P(0,0);
+	this.sectionIdx = Number();
+	this.mousePos = P(0,0);
+	this.sectionYs = [];
 	this.parent = parent;
 	this.rect = this.makeRect();
 	this.innerRect = this.makeInnerRect();
 	this.arrows = this.makeArrows();
-	
+	this.arrowAngle = 0;//sorry about right/left, 0/180 use.  right -> 0, left -> 180.  Tossing angle around is nice for getting position without a bunch of ifs
 }
 
 TreeButton.prototype = {
 	toTreeMode: function() {
-	
+		this.mode = 'tree';
+		if (this.arrowAngle = 180) {
+			this.pointArrows('right')
+		}
 	},
 	toObjectMode: function() {
-	
+		this.mode = 'object';
+		if (this == this.tree.clickedButton) {
+			this.pointArrows('left');
+			this.flyToPos(this.tree.buttonPosObjectModeSelected, 250);
+			//this.flyToPos(P(0, 75));
+		} else {
+			//this.flyToPos(P(0, 75));
+			this.flyToPos(P(-this.tree.rectDims.dx-50, this.pos.y));
+		}
 	},
 	makeRect: function() {
 		var rect = this.tree.paper.rect(0, 0, this.tree.rectDims.dx, this.tree.rectDims.dy, this.tree.rectRounding);
@@ -434,6 +499,7 @@ TreeButton.prototype = {
 		var pos = this.rectPos();
 		rect.transform('t' + pos.x + ',' + pos.y);
 		rect.parent = this;
+		rect.type = 'rect';
 		return rect;
 	},
 	makeInnerRect: function() {
@@ -457,6 +523,7 @@ TreeButton.prototype = {
 		var pos = this.innerRectPos();
 		rect.transform('t' + pos.x + ',' + pos.y);
 		rect.parent = this;
+		rect.type = 'arrows';
 		return rect;
 	},
 	makeArrows: function() {
@@ -472,29 +539,33 @@ TreeButton.prototype = {
 			})
 			arrow.hover(
 				function() {
-					this.parent.innerRect.attr({fill:this.parent.tree.rectColHover.hex})
+					this.parent.innerRect.attr({fill:this.parent.tree.rectColHover.hex});
 				},
 				function() {
 					this.parent.innerRect.attr({fill:this.parent.tree.rectCol.hex});
 				}				
 			)
+			if (this.dragFuncs) {
+				arrow.drag(this.dragFuncs.tree.onMove, this.dragFuncs.tree.onStart, this.dragFuncs.tree.onEnd);
+			}
 			arrow.parent = this;
+			arrow.type = 'arrows';
 			arrows.push(arrow);
 		}
 		return arrows;
 		
 	},
 	pointArrows: function(dir) {// 'left', 'right'
-		var angle, pos;
+		if (dir == 'left') {
+			this.arrowAngle = 180;
+		} else if (dir == 'right') {
+			this.arrowAngle = 0;
+		}
+		
 		for (var arrowIdx=0; arrowIdx<this.arrows.length; arrowIdx++) {
 			var arrow = this.arrows[arrowIdx];
-			if (dir == 'left') {
-				angle = 180;
-			} else if (dir == 'right') {
-				angle = 0;
-			}
-			pos = this.arrowPos(arrowIdx, dir);
-			arrow.transform('t' + pos.x + ',' + pos.y + 'r' + angle + ',0,0');
+			var pos = this.arrowPos(arrowIdx);
+			arrow.transform('t' + pos.x + ',' + pos.y + 'r' + this.arrowAngle + ',0,0');
 			
 		}
 	},
@@ -534,7 +605,7 @@ TreeButton.prototype = {
 			this.innerRect.transform('t' + innerRectPos.x + ',' + innerRectPos.y);
 			for (var arrowIdx=0; arrowIdx<this.arrows.length; arrowIdx++) {
 				var arrowPos = this.arrowPos(arrowIdx);
-				this.arrows[arrowIdx].transform('t' + arrowPos.x + ',' + arrowPos.y);
+				this.arrows[arrowIdx].transform('t' + arrowPos.x + ',' + arrowPos.y + 'r' + this.arrowAngle + ',0,0');
 				this.arrows[arrowIdx].toFront();
 			}
 		}
@@ -548,11 +619,11 @@ TreeButton.prototype = {
 			var innerRectPos = this.innerRectPos();
 			this.rect.toFront();
 			this.innerRect.toFront();
-			this.rect.animate({transform:'t' + rectPos.x + ',' + rectPos.y}, 250);
-			this.innerRect.animate({transform:'t' + innerRectPos.x + ',' + innerRectPos.y}, 250);
+			this.rect.animate({transform:'t' + rectPos.x + ',' + rectPos.y}, time);
+			this.innerRect.animate({transform:'t' + innerRectPos.x + ',' + innerRectPos.y}, time);
 			for (var arrowIdx=0; arrowIdx<this.arrows.length; arrowIdx++) {
 				var arrowPos = this.arrowPos(arrowIdx);
-				this.arrows[arrowIdx].animate({transform:'t' + arrowPos.x + ',' + arrowPos.y}, 250);
+				this.arrows[arrowIdx].animate({transform:'t' + arrowPos.x + ',' + arrowPos.y + 'r' + this.arrowAngle + ',0,0'}, time);
 				this.arrows[arrowIdx].toFront();
 			}
 		}
@@ -563,10 +634,10 @@ TreeButton.prototype = {
 	innerRectPos: function() {
 		return P(this.pos.x + this.tree.rectDims.dx - this.tree.innerRectDims.dx, this.pos.y);
 	},
-	arrowPos: function(arrowIdx, dirPointed) {//dirPointed assumes right
+	arrowPos: function(arrowIdx) {//dirPointed assumes right
 		var x = this.pos.x + this.tree.rectDims.dx - this.tree.innerRectDims.dx + this.tree.arrowOffset + arrowIdx*(this.tree.arrowSpacing + this.tree.arrowThickness);
 		var y = this.pos.y + (this.tree.rectDims.dy - this.tree.arrowDims.dy)/2;
-		if (dirPointed == 'left') {
+		if (this.arrowAngle == 180) {
 			x += this.tree.arrowDims.dx;
 			y += this.tree.arrowDims.dy;
 		}
