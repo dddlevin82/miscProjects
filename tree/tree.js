@@ -1,26 +1,34 @@
 function Tree(paper, pos) {
 	this.paper = paper;
 	this.pos = pos; //upper left corner of first section
-	this.blockHeight = 40;
-	this.blockWidth = 100;
+	this.rectDims = V(100, 40);
+	this.innerRectDims = V(30, 40);
 	this.circleOffset = V(80, 0);
 	this.circleRad = 15;
 	this.blockSpacing = 10;
-	this.totalBlockHeight = this.blockHeight + this.blockSpacing;
+	this.totalBlockHeight = this.rectDims.dy + this.blockSpacing;
 	this.promptIndent = 30;
-	this.blockCol = Col(100, 160, 193);//'#64a0c1';
-	this.blockColHover = Col(92, 147, 178);//'#5c93b2';
-	this.blockColSelect = Col(82, 108, 122);//'#526c7a';
-	this.blockColStroke = Col(59, 68, 73);//'#3b4449';
-	this.circleCol = Col(120, 180, 213);
+	this.rectRounding = 3;
+	this.innerRectWidth = 25;
+	this.arrowDims = V(17, 26);
+	this.arrowThickness = 4;
+	this.arrowSpacing = 3;
+	this.arrowOffset = 5;
+	this.numArrows = 2;
+	this.rectCol = Col(0, 164, 255);//'#64a0c1';
+	this.rectColHover = Col(0, 144, 224);//'#5c93b2';
+	//this.rectColSelect = Col(82, 108, 122);//'#526c7a';
+	//this.rectColStroke = Col(59, 68, 73);//'#3b4449';
+	this.arrowCol = Col(255, 255, 255);
+	//this.circleCol = Col(59, 68, 73);//Col(120, 180, 213);
+	//this.circleColHover = Col(110, 170, 203);
 	this.placerButtonPos = P(200, 300);
 	this.defineSectionDragFuncs();
 	this.definePromptDragFuncs();
 	this.placerButton = this.makePlacerButton();
-	
-	//this.placerBGRect = this.makePlacerBGRect();
+	this.clickedButton = undefined;
 	this.sections = [];
-	
+	//be like inner = paper.rect(70% over in main rect, round 3,) fill with circleCol.  Put arrows like >> or << of big rect color on it
 }
 
 Tree.prototype = {
@@ -29,7 +37,7 @@ Tree.prototype = {
 		var sectionIdx = this.getNewSectionIdx(pos);
 		if (!section) {
 		/*should make it send rectangle corner positions*/
-			section = new TreeSection(this, pos/*GET A POINT FOR THE UPPER LEFT CORNER, NOT FOR MOUSEPOS*/, this.sectionDragFuncs, this.promptDragFuncs, undefined);
+			section = new TreeSection(this, pos/*GET A POINT FOR THE UPPER LEFT CORNER, NOT FOR MOUSEPOS*/, this.sectionDragFuncs,  this.promptDragFuncs, undefined);
 		}
 		this.sections.splice(sectionIdx, 0, section);
 		//for (var idx=sectionIdx+1; idx<this.sections.length; idx++) {
@@ -43,11 +51,31 @@ Tree.prototype = {
 		this.sections[sectionIdx].addPrompt(pos, prompt);
 		this.moveAllToPositions('fly');
 	},
-	moveSection: function(srcIdx, destIdx) {
-		
+	toObjectEditorMode: function() {
+		for (var sectionIdx=0; sectionIdx<this.sections.length; sectionIdx++) {
+			var section = this.sections[sectionIdx];
+			section.button.toObjectMode();
+			var prompts = section.prompts;
+			for (var promptIdx=0; promptIdx<prompts.length; promptIdx++) {
+				prompt.buttom.toObjectMode();
+			}
+			
+		//check if button is selected in toObjectMode
+		}
 	},
-	movePrompt: function(srcSectionIdx, destSectionIdx, srcPromptIdx, destPromptIdx) {
-	
+
+	toTreeMode: function() {
+		this.moveAllToPositions('fly');
+		for (var sectionIdx=0; sectionIdx<this.sections.length; sectionIdx++) {
+			var section = this.sections[sectionIdx];
+			section.button.toTreeMode();
+			var prompts = section.prompts;
+			for (var promptIdx=0; promptIdx<prompts.length; promptIdx++) {
+				prompt.buttom.toTreeMode();
+			}
+			
+		//to object mode moves each button.  to tree mode gets moved by the moveAllToPositions function.  This is an acceptable inconsistancy because the buttons don't individually know where to go in to tree mode
+		}
 	},
 	removeSection: function(sectionIdx) {
 		if (this.sections[sectionIdx]) {
@@ -94,13 +122,13 @@ Tree.prototype = {
 		return this.sections.indexOf(section);
 	},
 	//drag and click functions are in context of the rect or circle.  this.parent will reference the button object.
-	sectionDragStart: function() {
+	sectionDragStartTreeMode: function() {
 		this.parent.tree.clickedButton = this.parent;
 		this.parent.sectionIdx = this.parent.tree.getSectionIdx(this.parent.parent);
 		this.parent.mousePos = posOnPaper(globalMousePos, this.parent.tree.paper);
 		this.parent.sectionYs = this.parent.tree.getSectionYs();
 	},
-	sectionDragMove: function() {
+	sectionDragMoveTreeMode: function() {
 		var sections = this.parent.tree.sections;
 		var curSectionIdx = this.parent.sectionIdx;
 		var mousePos = posOnPaper(globalMousePos, this.parent.tree.paper);
@@ -137,7 +165,7 @@ Tree.prototype = {
 		}
 		
 	},
-	sectionDragEnd: function() {
+	sectionDragEndTreeMode: function() {
 		this.parent.tree.clickedButton = undefined;
 		this.parent.sectionIdx = undefined;
 		this.parent.mousePos = P(0, 0);
@@ -146,12 +174,20 @@ Tree.prototype = {
 	},
 	defineSectionDragFuncs: function() {
 		this.sectionDragFuncs = {
-			onStart: this.sectionDragStart,
-			onMove: this.sectionDragMove,
-			onEnd: this.sectionDragEnd
+			tree: {
+				onStart: this.sectionDragStartTreeMode,
+				onMove: this.sectionDragMoveTreeMode,
+				onEnd: this.sectionDragEndTreeMode
+			},
+			object: {
+				onStart: undefined,
+				onMove: undefined,
+				onEnd: undefined
+			}
 		}
+		
 	},
-	promptDragStart: function() {
+	promptDragStartTreeMode: function() {
 		this.parent.tree.clickedButton = this.parent;
 		this.parent.promptIdx = this.parent.parent.section.getPromptIdx(this.parent.parent);
 		this.parent.mousePos = posOnPaper(globalMousePos, this.parent.tree.paper);
@@ -159,7 +195,7 @@ Tree.prototype = {
 		this.parent.sectionTop = this.parent.parent.section.pos.y;
 		this.parent.sectionBottom = this.parent.sectionTop + this.parent.parent.section.totalHeight();
 	},
-	promptDragMove: function() {
+	promptDragMoveTreeMode: function() {
 		var mousePos = posOnPaper(globalMousePos, this.parent.tree.paper);
 		var dPos = V(mousePos.x - this.parent.mousePos.x, mousePos.y- this.parent.mousePos.y);
 		this.parent.mousePos.set(mousePos);
@@ -182,7 +218,7 @@ Tree.prototype = {
 			
 		}
 	},
-	promptDragEnd: function() {
+	promptDragEndTreeMode: function() {
 		this.parent.tree.clickedButton = undefined;
 		this.parent.promptIdx = undefined;
 		this.parent.mousePos = P(0, 0);
@@ -193,10 +229,31 @@ Tree.prototype = {
 	},
 	definePromptDragFuncs: function() {
 		this.promptDragFuncs = {
-			onStart: this.promptDragStart,
-			onMove: this.promptDragMove,
-			onEnd: this.promptDragEnd		
+			tree: {
+				onStart: this.promptDragStartTreeMode,
+			onMove: this.promptDragMoveTreeMode,
+			onEnd: this.promptDragEndTreeMode	
+			},
+			object: {
+				onStart: undefined,
+				onMove: undefined,
+				onEnd: undefined
+			}
 		}
+	},
+	onClickRectTreeMode: function() {
+		console.log("I'm a rectangle!");
+	},
+	onClickRectObjectMode: function() {
+		console.log("I'm a rectangle!");
+	},
+	onClickCircleTreeMode: function() {
+		this.parent.tree.clickedButton = this.parent;
+		this.parent.tree.toObjectEditorMode();
+	},
+	onClickCircleObjectMode: function() {
+		this.parent.tree.clickedButton = this.parent;
+		this.parent.tree.toObjectEditorMode();
 	},
 	getSectionYs: function() {
 		var y = this.pos.y;
@@ -235,11 +292,14 @@ Tree.prototype = {
 				y += this.sections[sectionIdx].totalHeight();
 			}
 		}
+		if (this.clickedButton) {
+			this.clickedButton.groupToFront();
+		}
 	},
 
 }
 
-function TreeSection(tree, posInit, sectionDragFuncs, promptDragFunctions, onClick) {
+function TreeSection(tree, posInit, sectionDragFuncs, promptDragFuncs, onClick) {
 	this.tree = tree;
 	this.prompts = [];
 	this.pos = posInit.copy();
@@ -247,7 +307,7 @@ function TreeSection(tree, posInit, sectionDragFuncs, promptDragFunctions, onCli
 	this.mousePosInit = P(0, 0); //for dragging
 	this.sectionYs = []; //for dragging
 	this.sectionDragFuncs = sectionDragFuncs;
-	this.promptDragFunctions = promptDragFunctions;
+	this.promptDragFuncs = promptDragFuncs;
 	this.button = new TreeButton(this.tree, this, this.pos, sectionDragFuncs, onClick);
  
 }
@@ -256,9 +316,15 @@ TreeSection.prototype = {
 	addPrompt: function(releasePos, prompt) {
 		var newIdx = this.getNewPromptIdx(releasePos);
 		if (!prompt) {
-			prompt = new TreePrompt(this.tree, this, releasePos, this.promptDragFunctions)
+			prompt = new TreePrompt(this.tree, this, releasePos, this.promptDragFuncs)
 		}
 		this.prompts.splice(newIdx, 0, prompt);
+	},
+	toFront: function() {
+		this.button.toFront();
+		for (var promptIdx=0; promptIdx<this.prompts.length; promptIdx++) {
+			this.prompts[promptIdx].toFront();
+		}
 	},
 	move: function(v) {
 		this.pos.movePt(v);
@@ -314,6 +380,9 @@ TreePrompt.prototype = {
 	setSection: function(section) {
 		this.section = section;
 	},
+	toFront: function() {
+		this.button.toFront();
+	},
 	remove: function() {
 		this.button.remove();
 	},
@@ -326,87 +395,199 @@ function TreeButton(tree, parent, posInit, dragFuncs, onClick) {
 	this.tree = tree;
 	this.pos = posInit.copy();
 	this.dragFuncs = dragFuncs;
+	this.onClick = onClick;
 	this.parent = parent;
 	this.rect = this.makeRect();
-	this.circle = this.makeCircle();
+	this.innerRect = this.makeInnerRect();
+	this.arrows = this.makeArrows();
 	
 }
 
 TreeButton.prototype = {
-
+	toTreeMode: function() {
+	
+	},
+	toObjectMode: function() {
+	
+	},
 	makeRect: function() {
-		var rect = paper.rect(0, 0, this.tree.blockWidth, this.tree.blockHeight);
-		rect.attr(
-			{
-			fill: this.tree.blockCol.hex,
-			stroke: this.tree.blockColStroke.hex,
-			'stroke-width': 3,
-			'stroke-linejoin': 'round',
+		var rect = this.tree.paper.rect(0, 0, this.tree.rectDims.dx, this.tree.rectDims.dy, this.tree.rectRounding);
+		rect.attr({
+			fill: this.tree.rectCol.hex,
+			//stroke: this.tree.rectColStroke.hex,
+			'stroke-width': 0,
+			//'stroke-linejoin': 'round',
+		});
+		if (this.dragFuncs) {
+			rect.drag(this.dragFuncs.tree.onMove, this.dragFuncs.tree.onStart, this.dragFuncs.tree.onEnd);
+		}
+		rect.hover(
+			function() {
+				this.attr({fill:this.parent.tree.rectColHover.hex});
+				//this.parent.innerRect.attr({fill:this.parent.tree.rectColHover.hex});
+			}, 
+			function() {
+				this.attr({fill:this.parent.tree.rectCol.hex});
+				//this.parent.innerRect.attr({fill:this.parent.tree.rectCol.hex});
 			}
 		);
-		if (this.dragFuncs) {
-			rect.drag(this.dragFuncs.onMove, this.dragFuncs.onStart, this.dragFuncs.onEnd);
-		}
 		var pos = this.rectPos();
 		rect.transform('t' + pos.x + ',' + pos.y);
 		rect.parent = this;
 		return rect;
 	},
+	makeInnerRect: function() {
+		var rect = this.tree.paper.rect(0, 0, this.tree.innerRectDims.dx, this.tree.innerRectDims.dy, this.tree.rectRounding);
+		rect.attr({
+			fill: this.tree.rectCol.hex,
+			'stroke-width': 0
+			
+		});
+		if (this.dragFuncs) {
+			rect.drag(this.dragFuncs.tree.onMove, this.dragFuncs.tree.onStart, this.dragFuncs.tree.onEnd);
+		}
+		rect.hover(
+			function() {
+				this.attr({fill:this.parent.tree.rectColHover.hex})
+			},
+			function() {
+				this.attr({fill:this.parent.tree.rectCol.hex});
+			}
+		)
+		var pos = this.innerRectPos();
+		rect.transform('t' + pos.x + ',' + pos.y);
+		rect.parent = this;
+		return rect;
+	},
+	makeArrows: function() {
+		var path = this.makeArrowPath();
+		var arrows = [];
+		for (var arrowIdx=0; arrowIdx<this.tree.numArrows; arrowIdx++) {
+			var pos = this.arrowPos(arrowIdx);
+			var arrow = this.tree.paper.path(path);
+			arrow.transform('t' + pos.x + ',' + pos.y);
+			arrow.attr({
+				fill: this.tree.arrowCol.hex,
+				'stroke-width': 0
+			})
+			arrow.hover(
+				function() {
+					this.parent.innerRect.attr({fill:this.parent.tree.rectColHover.hex})
+				},
+				function() {
+					this.parent.innerRect.attr({fill:this.parent.tree.rectCol.hex});
+				}				
+			)
+			arrow.parent = this;
+			arrows.push(arrow);
+		}
+		return arrows;
+		
+	},
 	setParent: function(parent) {
 		this.parent = parent;
 	},
-	makeCircle: function() {
-		var circle = paper.circle(0, 0, this.tree.circleRad);
-		circle.attr(
-			{
-			fill: this.tree.circleCol,
-			
-			}
-		);
-		if (this.dragFuncs) {
-			circle.drag(this.dragFuncs.onMove, this.dragFuncs.onStart, this.dragFuncs.onEnd);
+	move: function(moveOrder, type, time) {
+		if (moveOrder instanceof Vector) {
+			var pos = P(this.pos.x + moveOrder.dx, this.pos.y + moveOrder.dy);
+		} else { //is point
+			var pos = moveOrder;
 		}
-		var pos = this.circlePos();
-		circle.transform('t' + pos.x + ',' + pos.y);
-		circle.parent = this;
-		return circle;
-	},	
-	move: function(v) {
-		var pos = P(this.pos.x + v.dx, this.pos.y + v.dy);
-		this.snapToPos(pos);
+		if (type == 'fly') {
+			this.flyToPos(pos, time);
+		} else {
+			this.snapToPos(pos);
+		}
+	},
+	groupToFront: function() {
+		this.parent.toFront();
+	},
+	toFront: function() {
+		this.rect.toFront();
+		this.innerRect.toFront();
+		for (var arrowIdx=0; arrowIdx<this.arrows.length; arrowIdx++) {
+			this.arrows[arrowIdx].toFront();
+		}
 	},
 	snapToPos: function(pos) {
 		if (!pos.sameAs(this.pos)) {
 			this.pos.set(pos);
 			var rectPos = this.rectPos();
-			var circlePos = this.circlePos();
+			var innerRectPos = this.innerRectPos();
 			this.rect.toFront();
-			this.circle.toFront();
+			this.innerRect.toFront();
 			this.rect.transform('t' + rectPos.x + ',' + rectPos.y);
-			this.circle.transform('t' + circlePos.x + ',' + circlePos.y);
+			this.innerRect.transform('t' + innerRectPos.x + ',' + innerRectPos.y);
+			for (var arrowIdx=0; arrowIdx<this.arrows.length; arrowIdx++) {
+				var arrowPos = this.arrowPos(arrowIdx);
+				this.arrows[arrowIdx].transform('t' + arrowPos.x + ',' + arrowPos.y);
+				this.arrows[arrowIdx].toFront();
+			}
 		}
 			
 	},
-	flyToPos: function(pos) {
+	flyToPos: function(pos, time) {
+		time = defaultTo(time, 250);
 		if (!pos.sameAs(this.pos)) {
 			this.pos.set(pos);
 			var rectPos = this.rectPos();
-			var circlePos = this.circlePos();
+			var innerRectPos = this.innerRectPos();
 			this.rect.toFront();
-			this.circle.toFront();
+			this.innerRect.toFront();
 			this.rect.animate({transform:'t' + rectPos.x + ',' + rectPos.y}, 250);
-			this.circle.animate({transform:'t' + circlePos.x + ',' + circlePos.y}, 250);
+			this.innerRect.animate({transform:'t' + innerRectPos.x + ',' + innerRectPos.y}, 250);
+			for (var arrowIdx=0; arrowIdx<this.arrows.length; arrowIdx++) {
+				var arrowPos = this.arrowPos(arrowIdx);
+				this.arrows[arrowIdx].animate({transform:'t' + arrowPos.x + ',' + arrowPos.y}, 250);
+				this.arrows[arrowIdx].toFront();
+			}
 		}
 	},
 	rectPos: function() {
 		return this.pos.copy();
 	},
-	circlePos: function() {
-		return P(this.pos.x + this.tree.circleOffset.dx, this.pos.y + this.tree.circleOffset.dy + this.tree.blockHeight/2);
+	innerRectPos: function() {
+		return P(this.pos.x + this.tree.rectDims.dx - this.tree.innerRectDims.dx, this.pos.y);
+	},
+	arrowPos: function(arrowIdx) {
+		var x = this.pos.x + this.tree.rectDims.dx - this.tree.innerRectDims.dx + this.tree.arrowOffset + arrowIdx*(this.tree.arrowSpacing + this.tree.arrowThickness);
+		var y = this.pos.y + (this.tree.rectDims.dy - this.tree.arrowDims.dy)/2;
+		return P(x, y);
+	},
+	makeArrowPath: function() {
+		var pts = [];
+		var width = this.tree.arrowDims.dx;
+		var height = this.tree.arrowDims.dy;
+		var thickness = this.tree.arrowThickness;
+		pts.push(P(0, 0));
+		pts.push(P(thickness, 0));
+		pts.push(P(width, height/2));
+		pts.push(P(thickness, height));
+		pts.push(P(0, height));
+		pts.push(P(width-thickness, height/2));
+		return makePath(pts, true);
 	},
 	remove: function() {
 		this.rect.remove();
 	},
+}
+
+function makePath(pts, closePath) {//closePath defaults to true
+	var path = 'M' + pts[0].x + ',' + pts[0].y;
+	for (var ptIdx=1; ptIdx<pts.length; ptIdx++) {
+		path += 'L' + pts[ptIdx].x + ',' + pts[ptIdx].y;
+	}
+	if (closePath || closePath===undefined) {
+		path += 'Z';
+	}
+	return path;
+}
+
+function defaultTo(val, defaultVal) {
+	if (val === undefined) {
+		return defaultVal;
+	}
+	return val;
 }
 
 function posOnPaper(mousePos, paper) {
