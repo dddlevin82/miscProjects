@@ -19,7 +19,7 @@ function Tree(paper, pos) {
 	this.rectColHover = Col(0, 144, 224);//'#5c93b2';
 	//this.rectColSelect = Col(82, 108, 122);//'#526c7a';
 	//this.rectColStroke = Col(59, 68, 73);//'#3b4449';
-	this.arrowCol = Col(255, 255, 255);
+	this.arrowCol = Col(0, 255, 255);
 	//this.circleCol = Col(59, 68, 73);//Col(120, 180, 213);
 	//this.circleColHover = Col(110, 170, 203);
 	this.placerButtonPos = P(200, 300);
@@ -484,6 +484,20 @@ TreeButton.prototype = {
 		return arrows;
 		
 	},
+	pointArrows: function(dir) {// 'left', 'right'
+		var angle, pos;
+		for (var arrowIdx=0; arrowIdx<this.arrows.length; arrowIdx++) {
+			var arrow = this.arrows[arrowIdx];
+			if (dir == 'left') {
+				angle = 180;
+			} else if (dir == 'right') {
+				angle = 0;
+			}
+			pos = this.arrowPos(arrowIdx, dir);
+			arrow.transform('t' + pos.x + ',' + pos.y + 'r' + angle + ',0,0');
+			
+		}
+	},
 	setParent: function(parent) {
 		this.parent = parent;
 	},
@@ -549,9 +563,13 @@ TreeButton.prototype = {
 	innerRectPos: function() {
 		return P(this.pos.x + this.tree.rectDims.dx - this.tree.innerRectDims.dx, this.pos.y);
 	},
-	arrowPos: function(arrowIdx) {
+	arrowPos: function(arrowIdx, dirPointed) {//dirPointed assumes right
 		var x = this.pos.x + this.tree.rectDims.dx - this.tree.innerRectDims.dx + this.tree.arrowOffset + arrowIdx*(this.tree.arrowSpacing + this.tree.arrowThickness);
 		var y = this.pos.y + (this.tree.rectDims.dy - this.tree.arrowDims.dy)/2;
+		if (dirPointed == 'left') {
+			x += this.tree.arrowDims.dx;
+			y += this.tree.arrowDims.dy;
+		}
 		return P(x, y);
 	},
 	makeArrowPath: function() {
