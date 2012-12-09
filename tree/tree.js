@@ -552,10 +552,10 @@ function TreeSection(tree, posInit, sectionDragFuncs, promptDragFuncs, clickFunc
 }
 
 TreeSection.prototype = {
-	addPrompt: function(releasePos, prompt) {
-		var newIdx = this.getNewPromptIdx(releasePos);
+	addPrompt: function(cornerPos, prompt) {
+		var newIdx = this.getNewPromptIdx(cornerPos);
 		if (!prompt) {
-			prompt = new TreePrompt(this.tree, this, releasePos, this.promptDragFuncs, this.clickFuncs)
+			prompt = new TreePrompt(this.tree, this, cornerPos, this.promptDragFuncs, this.clickFuncs)
 		}
 		this.prompts.splice(newIdx, 0, prompt);
 	},
@@ -591,7 +591,7 @@ TreeSection.prototype = {
 	getNewPromptIdx: function(releasePos) {
 		var y = this.pos.y + this.tree.totalButtonHeight;
 		for (var promptIdx=0; promptIdx<this.prompts.length; promptIdx++) {
-			if (y + this.tree.totalButtonHeight/2 > releasePos.y) {
+			if (y  > releasePos.y) {
 				return promptIdx;
 			}
 			y += this.tree.totalButtonHeight;
