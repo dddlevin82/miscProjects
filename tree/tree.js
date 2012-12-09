@@ -6,7 +6,7 @@ function Tree(paper, pos) {
 	this.circleOffset = V(80, 0);
 	this.circleRad = 15;
 	this.buttonSpacing = 10;
-	this.displaceDist = 20;
+	this.displaceDist = 9;
 	this.totalButtonHeight = this.buttonDims.dy + this.buttonSpacing;
 	this.buttonPosObjectModeSelected = P(10, 10);
 	this.promptIndent = 30;
@@ -381,6 +381,7 @@ Tree.prototype = {
 		}
 	},
 	placerRectDragStart: function() {
+		this.parent.tree.clickedButton = this;
 		this.parent.mousePos = posOnPaper(globalMousePos, this.parent.tree.paper);
 		this.parent.displaced = undefined;
 	},
@@ -392,22 +393,26 @@ Tree.prototype = {
 		this.parent.parent.move(dPos);
 		if (this.parent.tree.inButtonColumn(buttonPos)) {
 			var toDisplace = this.parent.tree.getIdxsToDisplace(buttonPos);
-			if (!objectsEqual(toDisplace, this.parent.displaced) {
+			if (!objectsEqual(toDisplace, this.parent.displaced)) {
+				console.log('displacing ' + toDisplace);
 				this.parent.tree.returnDisplaced(this.parent.displaced);
 				this.parent.tree.displace(toDisplace);
 				this.parent.displaced = toDisplace;
 			}
-		} else {
-			this.parent.tree.returnDisplaced(this.displaced);
+		} else if (this.parent.displaced) {
+			console.log('returning');
+			this.parent.tree.returnDisplaced(this.parent.displaced);
+			this.parent.displaced = undefined;
 		}
 	},
 	displace: function(toDisplace) {
-		for (var dir in displaced) {
-			if (dir) {
-				if (dir.promptIdx == -1) {
-					this.parent.tree.sections[dir.sectionIdx].button.displace(dir);
+		for (var dir in toDisplace) {
+			var buttonIdxs = toDisplace[dir];
+			if (buttonIdxs) {
+				if (buttonIdxs.promptIdx == -1) {
+					this.sections[buttonIdxs.sectionIdx].button.displace(dir);
 				} else {
-					this.parent.tree.sections[dir.sectionIdx].prompts[buttonsIdxs.promptIdx].displace(dir);
+					this.sections[buttonIdxs.sectionIdx].prompts[buttonIdxs.promptIdx].button.displace(dir);
 				}
 			}
 		}		
@@ -415,20 +420,21 @@ Tree.prototype = {
 	returnDisplaced: function(displaced) {
 		if (displaced) {
 			for (var dir in displaced) {
-				if (dir) {
+				var buttonIdxs = displaced[dir];
+				if (buttonIdxs) {
 					if (buttonIdxs.promptIdx == -1) {
-						this.parent.tree.sections[dir.sectionIdx].button.toPos();
+						this.sections[buttonIdxs.sectionIdx].button.toPos();
 					} else {
-						this.parent.tree.sections[dir.sectionIdx].prompts[buttonsIdxs.promptIdx].toPos();
+						this.sections[buttonIdxs.sectionIdx].prompts[buttonIdxs.promptIdx].button.toPos();
 					}
 				}
 			}
 		}
 	},
 	inButtonColumn: function(pos) {
-		var maxX = this.parent.tree.pos.x + this.parent.tree.buttonDims.dx + this.parent.tree.promptIndent + this.parent.tree.placerBlockTolerance;
-		var minX = this.parent.tree.pos.y - this.parent.tree.placerBlockTolerance;
-		return this.parent.parent.pos.x + this.parent.tree.buttonDims.dx > minX || this.parent.parent.pos.x < minX;
+		var maxX = this.pos.x + this.buttonDims.dx + this.promptIndent + this.placerBlockTolerance;
+		var minX = this.pos.y - this.placerBlockTolerance;
+		return this.clickedButton.parent.pos.x + this.buttonDims.dx > minX && this.clickedButton.parent.pos.x < maxX;
 	},
 	placerRectDragEnd: function() {
 	
@@ -680,11 +686,11 @@ TreeButton.prototype = {
 		} else if (dir == 'down') {
 			dy = this.tree.displaceDist;
 		}
-		this.move(V(0, dy), 'fly', 100);
+		this.move(V(0, dy), 'fly', 300);
 	},
 	toPos: function() {
 		var pos = this.tree.getButtonPos(this);
-		this.move(pos, 'fly', 100);
+		this.move(pos, 'fly', 300);
 	},
 	makeRect: function() {
 		var rect = this.tree.paper.rect(0, 0, this.tree.buttonDims.dx, this.tree.buttonDims.dy, this.tree.rectRounding);
@@ -899,7 +905,7 @@ function objectsEqual(a, b) {
 }
 function objectsEqualInDirection(a, b) {
 	for (var alet in a) {
-		if (b.hasOwnProperty(alet)) {
+		if (b && b.hasOwnProperty(alet)) {
 			if (typeof a[alet] == 'object') {
 				if (!objectsEqual(a[alet], b[alet])) {
 					return false;
