@@ -1,12 +1,13 @@
 function Tree(paper, pos) {
 	this.paper = paper;
 	this.pos = pos; //upper left corner of first section
-	this.rectDims = V(100, 40);
+	this.buttonDims = V(100, 40);
 	this.innerRectDims = V(30, 40);
 	this.circleOffset = V(80, 0);
 	this.circleRad = 15;
-	this.blockSpacing = 10;
-	this.totalBlockHeight = this.rectDims.dy + this.blockSpacing;
+	this.buttonSpacing = 10;
+	this.displaceDist = 20;
+	this.totalButtonHeight = this.buttonDims.dy + this.buttonSpacing;
 	this.buttonPosObjectModeSelected = P(10, 10);
 	this.promptIndent = 30;
 	this.rectRounding = 3;
@@ -17,6 +18,7 @@ function Tree(paper, pos) {
 	this.arrowOffset = 5;
 	this.numArrows = 2;
 	this.snapDist = 5;
+	this.placerBlockTolerance = 10; //how close placer block has to be before stuff starts moving out of the way
 	this.bgCol = Col(255, 255, 255);
 	this.rectCol = Col(0, 164, 255);//'#64a0c1';
 	this.rectColHover = Col(0, 144, 224);//'#5c93b2';
@@ -68,7 +70,6 @@ Tree.prototype = {
 			}
 		}
 	},
-//HEY - FOR PLACING, ABUSE THE totalHeight FUNCTION
 	toTreeMode: function() {
 		this.placerButton.show();
 		this.unclickButton();
@@ -122,6 +123,59 @@ Tree.prototype = {
 			y += sectionHeight;
 		}
 		return this.sections.length-1;
+	},
+	getButtonPos: function(button) {
+		//yo yo, your context may be off here.  Haven't decided who's calling it yet.  Probably button.
+		var y = this.pos.y;
+		var x = this.pos.x;
+		for (var sectionIdx=0; sectionIdx<this.sections.length; sectionIdx++) {
+			if (this.sections[sectionIdx].button == button) {
+				return P(x, y);
+			}
+			y += this.totalButtonHeight;
+			for (var promptIdx=0; promptIdx<this.sections[sectionIdx].prompts.length; promptIdx++) {
+				if (this.sections[sectionIdx].prompts[promptIdx].button == button) {
+					return P(x + this.promptIndent, y);
+				}
+				y += this.totalButtonHeight;
+			}
+		}
+	},
+	getIdxsToDisplace: function(pos) {//with pos being an upper corner of the button
+		var up, down;
+		var y = this.pos.y;
+		if (pos.y < this.pos.y) {
+			up = undefined;
+			down = {sectionIdx:0, promptIdx:-1};
+			return {up: up, down: down};
+		}
+		for (var sectionIdx=0; sectionIdx<this.sections.length; sectionIdx++) {
+			var section = this.sections[sectionIdx];
+			var prompts = section.prompts;
+			if (pos.y >= y && pos.y < y + this.totalButtonHeight) {
+				up = {sectionIdx:sectionIdx, promptIdx:-1};
+				return {up: up, down: this.getToDisplaceDown(sectionIdx, -1, prompts)}
+			}
+			y += this.totalButtonHeight;
+			
+			for (var promptIdx=0; promptIdx<prompts.length; promptIdx++) {
+				if (pos.y >= y && pos.y < y + this.totalButtonHeight) {
+					up = {sectionIdx:sectionIdx, promptIdx:promptIdx};
+					return {up: up, down: this.getToDisplaceDown(sectionIdx, promptIdx, prompts)};
+				}
+				y += this.totalButtonHeight;
+			}
+			
+		}
+	},
+	getToDisplaceDown: function(sectionIdx, promptIdx, prompts) {
+		if (prompts[promptIdx+1]) {
+			return {sectionIdx:sectionIdx, promptIdx:promptIdx+1};
+		} else if (this.sections[sectionIdx+1]) {
+			return {sectionIdx:sectionIdx+1, promptIdx:-1};
+		} else {
+			return undefined;
+		}
 	},
 	makePlacerButton: function() {
 		var pos = this.placerButtonPos;
@@ -251,10 +305,10 @@ Tree.prototype = {
 			this.parent.mousePos.set(mousePos);
 			this.parent.parent.move(dPos);
 			var prompts = this.parent.parent.section.prompts;
-			var totalBlockHeight = this.parent.tree.totalBlockHeight;
+			var totalButtonHeight = this.parent.tree.totalButtonHeight;
 			var pos = this.parent.pos;
-			var topOfPrompts = this.parent.sectionTop + totalBlockHeight;
-			var newIdx = Math.floor(((pos.y + totalBlockHeight/2 - topOfPrompts)/totalBlockHeight));
+			var topOfPrompts = this.parent.sectionTop + totalButtonHeight;
+			var newIdx = Math.floor(((pos.y + totalButtonHeight/2 - topOfPrompts)/totalButtonHeight));
 			var boundedIdx = Math.min(prompts.length-1, Math.max(-1, newIdx));
 			var switchingBlock = newIdx != boundedIdx;
 			if (newIdx != this.parent.promptIdx && !switchingBlock) {
@@ -328,13 +382,53 @@ Tree.prototype = {
 	},
 	placerRectDragStart: function() {
 		this.parent.mousePos = posOnPaper(globalMousePos, this.parent.tree.paper);
+		this.parent.displaced = undefined;
 	},
 	placerRectDragMove: function() {
+		var buttonPos = this.parent.parent.pos;
 		var curMousePos = posOnPaper(globalMousePos, this.parent.tree.paper);
 		var dPos = this.parent.mousePos.VTo(curMousePos);
 		this.parent.mousePos.set(curMousePos);
 		this.parent.parent.move(dPos);
-		
+		if (this.parent.tree.inButtonColumn(buttonPos)) {
+			var toDisplace = this.parent.tree.getIdxsToDisplace(buttonPos);
+			if (!objectsEqual(toDisplace, this.parent.displaced) {
+				this.parent.tree.returnDisplaced(this.parent.displaced);
+				this.parent.tree.displace(toDisplace);
+				this.parent.displaced = toDisplace;
+			}
+		} else {
+			this.parent.tree.returnDisplaced(this.displaced);
+		}
+	},
+	displace: function(toDisplace) {
+		for (var dir in displaced) {
+			if (dir) {
+				if (dir.promptIdx == -1) {
+					this.parent.tree.sections[dir.sectionIdx].button.displace(dir);
+				} else {
+					this.parent.tree.sections[dir.sectionIdx].prompts[buttonsIdxs.promptIdx].displace(dir);
+				}
+			}
+		}		
+	},
+	returnDisplaced: function(displaced) {
+		if (displaced) {
+			for (var dir in displaced) {
+				if (dir) {
+					if (buttonIdxs.promptIdx == -1) {
+						this.parent.tree.sections[dir.sectionIdx].button.toPos();
+					} else {
+						this.parent.tree.sections[dir.sectionIdx].prompts[buttonsIdxs.promptIdx].toPos();
+					}
+				}
+			}
+		}
+	},
+	inButtonColumn: function(pos) {
+		var maxX = this.parent.tree.pos.x + this.parent.tree.buttonDims.dx + this.parent.tree.promptIndent + this.parent.tree.placerBlockTolerance;
+		var minX = this.parent.tree.pos.y - this.parent.tree.placerBlockTolerance;
+		return this.parent.parent.pos.x + this.parent.tree.buttonDims.dx > minX || this.parent.parent.pos.x < minX;
 	},
 	placerRectDragEnd: function() {
 	
@@ -382,7 +476,7 @@ Tree.prototype = {
 		var ys = [];
 		for (var sectionIdx=0; sectionIdx<this.sections.length; sectionIdx++) {
 			ys.push(y);
-			y += this.totalBlockHeight * (1 + this.sections[sectionIdx].prompts.length);
+			y += this.totalButtonHeight * (1 + this.sections[sectionIdx].prompts.length);
 		}
 		return ys;
 	},
@@ -395,13 +489,13 @@ Tree.prototype = {
 			if (section.button != this.clickedButton) {
 				section.button.move(P(x, y), moveStyle);
 				section.pos.set(P(x,y));
-				y += this.totalBlockHeight;
+				y += this.totalButtonHeight;
 				for (var promptIdx=0; promptIdx<section.prompts.length; promptIdx++) {
 					var prompt = section.prompts[promptIdx];
 					if (prompt.button != this.clickedButton) {
 						prompt.button.move(P(x+this.promptIndent, y), moveStyle);
 					}
-					y += this.totalBlockHeight;
+					y += this.totalButtonHeight;
 				}
 			} else {
 				y += this.sections[sectionIdx].totalHeight();
@@ -463,12 +557,12 @@ TreeSection.prototype = {
 		}
 	},
 	getNewPromptIdx: function(releasePos) {
-		var y = this.pos.y + this.tree.totalBlockHeight;
+		var y = this.pos.y + this.tree.totalButtonHeight;
 		for (var promptIdx=0; promptIdx<this.prompts.length; promptIdx++) {
-			if (y + this.tree.totalBlockHeight/2 > releasePos.y) {
+			if (y + this.tree.totalButtonHeight/2 > releasePos.y) {
 				return promptIdx;
 			}
-			y += this.tree.totalBlockHeight;
+			y += this.tree.totalButtonHeight;
 		}		
 		return this.prompts.length;
 	},
@@ -492,7 +586,7 @@ TreeSection.prototype = {
 		}
 	},
 	totalHeight: function() {
-		return this.tree.totalBlockHeight*(1+this.prompts.length);
+		return this.tree.totalButtonHeight*(1+this.prompts.length);
 	}
 }
 
@@ -576,11 +670,24 @@ TreeButton.prototype = {
 			//this.flyToPos(P(0, 75));
 		} else {
 			//this.flyToPos(P(0, 75));
-			this.flyToPos(P(-this.tree.rectDims.dx-50, this.pos.y), 150);
+			this.flyToPos(P(-this.tree.buttonDims.dx-50, this.pos.y), 150);
 		}
 	},
+	displace: function(dir) {
+		var dy;
+		if (dir == 'up') {
+			dy = -this.tree.displaceDist;
+		} else if (dir == 'down') {
+			dy = this.tree.displaceDist;
+		}
+		this.move(V(0, dy), 'fly', 100);
+	},
+	toPos: function() {
+		var pos = this.tree.getButtonPos(this);
+		this.move(pos, 'fly', 100);
+	},
 	makeRect: function() {
-		var rect = this.tree.paper.rect(0, 0, this.tree.rectDims.dx, this.tree.rectDims.dy, this.tree.rectRounding);
+		var rect = this.tree.paper.rect(0, 0, this.tree.buttonDims.dx, this.tree.buttonDims.dy, this.tree.rectRounding);
 		rect.attr({
 			fill: this.tree.rectCol.hex,
 			//stroke: this.tree.rectColStroke.hex,
@@ -740,11 +847,11 @@ TreeButton.prototype = {
 		return this.pos.copy();
 	},
 	innerRectPos: function() {
-		return P(this.pos.x + this.tree.rectDims.dx - this.tree.innerRectDims.dx, this.pos.y);
+		return P(this.pos.x + this.tree.buttonDims.dx - this.tree.innerRectDims.dx, this.pos.y);
 	},
 	arrowPos: function(arrowIdx) {//dirPointed assumes right
-		var x = this.pos.x + this.tree.rectDims.dx - this.tree.innerRectDims.dx + this.tree.arrowOffset + arrowIdx*(this.tree.arrowSpacing + this.tree.arrowThickness);
-		var y = this.pos.y + (this.tree.rectDims.dy - this.tree.arrowDims.dy)/2;
+		var x = this.pos.x + this.tree.buttonDims.dx - this.tree.innerRectDims.dx + this.tree.arrowOffset + arrowIdx*(this.tree.arrowSpacing + this.tree.arrowThickness);
+		var y = this.pos.y + (this.tree.buttonDims.dy - this.tree.arrowDims.dy)/2;
 		if (this.arrowAngle == 180) {
 			x += this.tree.arrowDims.dx;
 			y += this.tree.arrowDims.dy;
@@ -786,7 +893,28 @@ function defaultTo(val, defaultVal) {
 	}
 	return val;
 }
-
+function objectsEqual(a, b) {
+	return Math.min(objectsEqualInDirection(a, b), objectsEqualInDirection(b, a));
+	
+}
+function objectsEqualInDirection(a, b) {
+	for (var alet in a) {
+		if (b.hasOwnProperty(alet)) {
+			if (typeof a[alet] == 'object') {
+				if (!objectsEqual(a[alet], b[alet])) {
+					return false;
+				}
+			} else {
+				if (a[alet] != b[alet]) {
+					return false;
+				}
+			}
+		} else {
+			return false;
+		}
+	}
+	return true;
+}
 function posOnPaper(mousePos, paper) {
 	return P(mousePos.x-paper._left, mousePos.y-paper._top);
 }
