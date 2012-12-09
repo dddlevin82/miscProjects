@@ -394,16 +394,37 @@ Tree.prototype = {
 		if (this.parent.tree.inButtonColumn(buttonPos)) {
 			var toDisplace = this.parent.tree.getIdxsToDisplace(buttonPos);
 			if (!objectsEqual(toDisplace, this.parent.displaced)) {
-				console.log('displacing ' + toDisplace);
 				this.parent.tree.returnDisplaced(this.parent.displaced);
 				this.parent.tree.displace(toDisplace);
 				this.parent.displaced = toDisplace;
 			}
 		} else if (this.parent.displaced) {
-			console.log('returning');
 			this.parent.tree.returnDisplaced(this.parent.displaced);
 			this.parent.displaced = undefined;
 		}
+	},
+	placerRectDragEnd: function() {
+		var buttonPos = this.parent.parent.pos;
+		this.parent.tree.clickedButton = undefined;
+		if (this.parent.tree.inButtonColumn(buttonPos)) {
+			if (this.parent.displaced) {
+				if (this.parent.displaced.up == undefined) {
+					this.parent.tree.addSection(buttonPos);
+				} else if (this.parent.displaced.down && this.parent.displaced.down.promptIdx == -1 && this.parent.tree.inSectionColumn(buttonPos)) {
+					this.parent.tree.addSection(buttonPos);
+				} else if (this.parent.displaced.down == undefined && this.parent.tree.inSectionColumn(buttonPos)) {
+					this.parent.tree.addSection(buttonPos);
+				} else {
+					this.parent.tree.addPrompt(buttonPos);
+				}
+			} else {
+				this.parent.tree.addSection(buttonPos);
+			}
+
+		}
+		this.parent.displaced = undefined;
+		this.parent.mousePos = P(0, 0);
+		this.parent.parent.move(this.parent.tree.placerButtonPos, 'snap');
 	},
 	displace: function(toDisplace) {
 		for (var dir in toDisplace) {
@@ -433,11 +454,12 @@ Tree.prototype = {
 	},
 	inButtonColumn: function(pos) {
 		var maxX = this.pos.x + this.buttonDims.dx + this.promptIndent + this.placerBlockTolerance;
-		var minX = this.pos.y - this.placerBlockTolerance;
-		return this.clickedButton.parent.pos.x + this.buttonDims.dx > minX && this.clickedButton.parent.pos.x < maxX;
+		var minX = this.pos.x - this.placerBlockTolerance;
+		return pos.x + this.buttonDims.dx > minX && pos.x < maxX;
 	},
-	placerRectDragEnd: function() {
-	
+	inSectionColumn: function(pos) {
+		var maxX = this.pos.x + this.promptIndent;
+		return pos.x < maxX;
 	},
 	definePlacerRectFuncs: function() {
 		this.placerRectDragFuncs = {
@@ -555,11 +577,15 @@ TreeSection.prototype = {
 			this.prompts[promptIdx].toFront();
 		}
 	},
-	move: function(v) {
-		this.pos.movePt(v);
-		this.button.move(v);
+	move: function(moveOrder) {
+		if (moveOrder instanceof Vector) {
+			this.pos.movePt(moveOrder);
+		} else {
+			this.pos.set(moveOrder);
+		}
+		this.button.move(moveOrder);
 		for (var promptIdx=0; promptIdx<this.prompts.length; promptIdx++) {
-			this.prompts[promptIdx].move(v);
+			this.prompts[promptIdx].move(moveOrder);
 		}
 	},
 	getNewPromptIdx: function(releasePos) {
