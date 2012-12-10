@@ -1,14 +1,16 @@
 function Tree(paper, pos) {
 	this.paper = paper;
 	this.pos = pos; //upper left corner of first section
-	this.buttonDims = V(100, 40);
-	this.innerRectDims = V(30, 40);
+	this.buttonDims = V(130, 30);
+	this.innerRectDims = V(30, this.buttonDims.dy);
 	this.circleOffset = V(80, 0);
 	this.circleRad = 15;
 	this.buttonSpacing = 10;
 	this.displaceDist = 9;
 	this.totalButtonHeight = this.buttonDims.dy + this.buttonSpacing;
 	this.buttonPosObjectModeSelected = P(10, 10);
+	this.labelIndent = 3;
+	this.labelTextSize = 14;
 	this.promptIndent = 30;
 	this.rectRounding = 3;
 	this.innerRectWidth = 25;
@@ -106,7 +108,7 @@ Tree.prototype = {
 		var y = this.pos.y;
 		for (var sectionIdx=0; sectionIdx<this.sections.length; sectionIdx++) {
 			var sectionHeight = this.sections[sectionIdx].totalHeight();
-			if (y + sectionHeight/2 > pos.y) {
+			if (y > pos.y) {
 				return sectionIdx;
 			}
 			y += sectionHeight;
@@ -179,7 +181,7 @@ Tree.prototype = {
 	},
 	makePlacerButton: function() {
 		var pos = this.placerButtonPos;
-		var placer = new TreeSection(this, pos, this.placerRectDragFuncs, undefined, undefined, true);
+		var placer = new TreeSection(this, pos, this.placerRectDragFuncs, undefined, undefined, undefined, true);
 		return placer;
 	},
 	makeBGRect: function() {
@@ -654,7 +656,7 @@ TreePrompt.prototype = {
 	}
 }
 
-function TreeButton(tree, parent, posInit, dragFuncs, clickFuncs, isPlacerButton) {
+function TreeButton(tree, parent, posInit, dragFuncs, clickFuncs, labelText, isPlacerButton) {
 	this.tree = tree;
 	this.mode = 'tree';
 	this.pos = posInit.copy();
@@ -666,6 +668,8 @@ function TreeButton(tree, parent, posInit, dragFuncs, clickFuncs, isPlacerButton
 	this.mousePos = P(0,0);
 	this.sectionYs = [];
 	this.parent = parent;
+	this.labelText = defaultTo(labelText, '');
+	this.updateLabel(this.labelText);
 	this.isPlacerButton = defaultTo(isPlacerButton, false);
 	this.rect = this.makeRect();
 	this.innerRect = this.makeInnerRect();
@@ -780,6 +784,38 @@ TreeButton.prototype = {
 		return arrows;
 		
 	},
+	updateLabel: function(labelText) {
+		//Yo yo, I am not strictly using this.labelText because I want that to be the untruncated text
+		this.labelText = labelText;
+		var pos = this.labelPos();
+		if (this.label) {
+			this.label.remove();
+		}
+		var maxWidth = this.tree.buttonDims.dx - this.tree.labelIndent - this.tree.innerRectDims.dx - 10;
+		var tempText = '';
+		var label = this.tree.paper.text(0, 0, tempText).attr({'text-anchor': 'start', 'font-size': this.tree.labelTextSize});
+		var tooWide = false;
+		for (var letterIdx=0; letterIdx<labelText.length; letterIdx++) {
+			tempText = tempText + labelText[letterIdx];
+			label.attr({'text': tempText});
+			
+			if (label.getBBox().width > maxWidth && letterIdx != labelText.length-1) {
+				tooWide = true;
+				break;
+			}
+		}
+		if (tooWide) {
+			label.attr({'text': tempText + '...'});
+		}
+		label.transform('t' + pos.x + ',' + pos.y);
+		this.assignHover(label, 'rect', this.tree.rectColHover, this.tree.rectCol);
+		if (this.dragFuncs) {
+			label.drag(this.dragFuncs.tree.onMove, this.dragFuncs.tree.onStart, this.dragFuncs.tree.onEnd);
+		}
+		label.parent = this;
+		label.type = 'label';
+		this.label = label;
+	},
 	assignHover: function(raphaelShape, toChange, hoverOnCol, hoverOffCol) {
 		if (this.isPlacerButton) {
 			raphaelShape.hover(this.hoverOnChangeAll, this.hoverOffChangeAll);
@@ -846,14 +882,13 @@ TreeButton.prototype = {
 			this.pos.set(pos);
 			var rectPos = this.rectPos();
 			var innerRectPos = this.innerRectPos();
-			this.rect.toFront();
-			this.innerRect.toFront();
-			this.rect.transform('t' + rectPos.x + ',' + rectPos.y);
-			this.innerRect.transform('t' + innerRectPos.x + ',' + innerRectPos.y);
+			var labelPos = this.labelPos();
+			this.rect.transform('t' + rectPos.x + ',' + rectPos.y).toFront();
+			this.innerRect.transform('t' + innerRectPos.x + ',' + innerRectPos.y).toFront();
+			this.label.transform('t' + labelPos.x + ',' + labelPos.y).toFront();
 			for (var arrowIdx=0; arrowIdx<this.arrows.length; arrowIdx++) {
 				var arrowPos = this.arrowPos(arrowIdx);
-				this.arrows[arrowIdx].transform('t' + arrowPos.x + ',' + arrowPos.y + 'r' + this.arrowAngle + ',0,0');
-				this.arrows[arrowIdx].toFront();
+				this.arrows[arrowIdx].transform('t' + arrowPos.x + ',' + arrowPos.y + 'r' + this.arrowAngle + ',0,0').toFront();
 			}
 		}
 			
@@ -864,14 +899,14 @@ TreeButton.prototype = {
 			this.pos.set(pos);
 			var rectPos = this.rectPos();
 			var innerRectPos = this.innerRectPos();
-			this.rect.toFront();
-			this.innerRect.toFront();
-			this.rect.animate({transform:'t' + rectPos.x + ',' + rectPos.y}, time, 'ease-in-out');
-			this.innerRect.animate({transform:'t' + innerRectPos.x + ',' + innerRectPos.y}, time, 'ease-in-out');
+			var labelPos = this.labelPos();
+			this.rect.animate({transform:'t' + rectPos.x + ',' + rectPos.y}, time, 'ease-in-out').toFront();;
+			this.innerRect.animate({transform:'t' + innerRectPos.x + ',' + innerRectPos.y}, time, 'ease-in-out').toFront();
+			this.label.animate({transform:'t' + labelPos.x + ',' + labelPos.y}, time, 'ease-in-out').toFront();
 			for (var arrowIdx=0; arrowIdx<this.arrows.length; arrowIdx++) {
 				var arrowPos = this.arrowPos(arrowIdx);
-				this.arrows[arrowIdx].animate({transform:'t' + arrowPos.x + ',' + arrowPos.y + 'r' + this.arrowAngle + ',0,0'}, time, 'ease-in-out');
-				this.arrows[arrowIdx].toFront();
+				this.arrows[arrowIdx].animate({transform:'t' + arrowPos.x + ',' + arrowPos.y + 'r' + this.arrowAngle + ',0,0'}, time, 'ease-in-out').toFront();
+				//this.arrows[arrowIdx].toFront();
 			}
 		}
 	},
@@ -890,6 +925,9 @@ TreeButton.prototype = {
 		}
 		return P(x, y);
 	},
+	labelPos: function() {
+		return this.pos.copy().movePt(V(this.tree.labelIndent, this.tree.buttonDims.dy/2));
+	},
 	makeArrowPath: function() {
 		var pts = [];
 		var width = this.tree.arrowDims.dx;
@@ -905,6 +943,11 @@ TreeButton.prototype = {
 	},
 	remove: function() {
 		this.rect.remove();
+		this.innerRect.remove();
+		this.label.remove();
+		for (var arrowIdx=0; arrowIdx<this.arrows.length; arrowIdx++) {
+			this.arrows[arrowIdx].remove();
+		}
 	},
 }
 
