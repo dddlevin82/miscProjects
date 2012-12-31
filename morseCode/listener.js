@@ -26,9 +26,11 @@ var tokenIsDown =
 	'^': 0
 }
 
-function Interpretation(string, wrongness) {
+function Interpretation(string, wrongness, blipCountString, blipCount) {
 	this.string = string;
 	this.wrongness = wrongness;
+	this.blipCountString = blipCountString;
+	this.blipCount = blipCount;
 }
 
 function B(isDown, time) {
@@ -146,6 +148,7 @@ Listener.prototype = {
 function Interpreter() {
 	this.interps = [];
 	this.blips = [];
+	this.adjustPaceNumBlips = 10;
 }
 
 Interpreter.prototype = {
@@ -183,9 +186,13 @@ Interpreter.prototype = {
 			if (!prevInterp) {
 				var prevWrongness = 0;
 				var prevStr = '';
+				var prevBlipCount = 0;
+				var prevBlipCountString = 0;
 			} else {
 				var prevWrongness = prevInterp.wrongness;
 				var prevStr = prevInterp.string;
+				var prevBlipCount = prevInterp.prevBlipCount;
+				var prevBlipCount = prevInterp.prevBlipCountString;
 			}
 			for (var letter in letterToTokensMap) {
 				
@@ -196,8 +203,8 @@ Interpreter.prototype = {
 					bestStr = prevStr + letter;
 				}
 			}
-
-			nextInterps.push(new Interpretation(bestStr, minWrongness));
+			var blipCountString = prevBlipCountString + letterToTokenMap[bestStr[bestStr.length-1]];
+			nextInterps.push(new Interpretation(bestStr, minWrongness, blipCountString,  this.blips.length));
 		
 		}
 
@@ -237,7 +244,44 @@ Interpreter.prototype = {
 			numTokens += letterToTokensMap[str[idx].toUpperCase()].length;
 		}
 		return numTokens;
-	}
+	},
+	adjustPace: function() {
+		var unitTimes = [];
+		var interp = this.interps[this.interps.length-1];
+		var string = interp.string;
+		var blipCount = interp.blipCount;
+		//may be off by 1
+		var blipCountString = interp.blipCountString;
+		var countBackFrom = Math.min(blipCount, blipCountString);
+		var blipIdx = blipCountString;
+		var stopAt = countBackFrom - this.adjustPaceNumBlips;
+		
+		for (var letterIdx=string.length-1; letterIdx>=0; letterIdx--) {
+			var letter = string[letterIdx];
+			var tokens = letterToTokenMap[letter];
+			
+			for (var tokenIdx=tokens.length-1; tokenIdx>=0; tokenIdx--) {
+				var token = tokens[tokenIdx];
+				if (blipIdx <= countBackFrom) {
+					if (token == ' ') {
+					} else if (token == '/' || token == '-') {
+						unitTimes.push(this.blips[blipIdx].time/3);
+					} else {
+						unitTimes.push(this.blips[blipIdx].time);
+					}
+				}
+				blipIdx--;
+				
+				if (blipIdx < 0 || blipIdx == stopAt) {
+					unitTime = arrayAvg(unitTimes);
+					return;
+				}
+				
+			}
+			
+		}
+		
+	},
 }
 
 function arrayAvg(array) {
