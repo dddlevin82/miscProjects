@@ -148,7 +148,7 @@ Listener.prototype = {
 function Interpreter() {
 	this.interps = [];
 	this.blips = [];
-	this.adjustPaceNumBlips = 10;
+	this.adjustPaceNumBlips = 20;
 }
 
 Interpreter.prototype = {
@@ -175,6 +175,9 @@ Interpreter.prototype = {
 			this.blips.push(new Blip(isDown, dTime));
 			this.addInterpretation();
 		}
+		if (this.blips.length%10 == 0) {
+			this.adjustPace();
+		}
 	},
 	addInterpretation: function() {
 		var idx = Math.max(0, this.blips.length - 10);
@@ -187,12 +190,10 @@ Interpreter.prototype = {
 				var prevWrongness = 0;
 				var prevStr = '';
 				var prevBlipCount = 0;
-				var prevBlipCountString = 0;
 			} else {
 				var prevWrongness = prevInterp.wrongness;
 				var prevStr = prevInterp.string;
 				var prevBlipCount = prevInterp.prevBlipCount;
-				var prevBlipCount = prevInterp.prevBlipCountString;
 			}
 			for (var letter in letterToTokensMap) {
 				
@@ -203,8 +204,8 @@ Interpreter.prototype = {
 					bestStr = prevStr + letter;
 				}
 			}
-			var blipCountString = prevBlipCountString + letterToTokenMap[bestStr[bestStr.length-1]];
-			nextInterps.push(new Interpretation(bestStr, minWrongness, blipCountString,  this.blips.length));
+			
+			nextInterps.push(new Interpretation(bestStr, minWrongness, undefined,  this.blips.length));
 		
 		}
 
@@ -217,6 +218,7 @@ Interpreter.prototype = {
 				minWrongness = nextInterps[idx].wrongness;
 			}
 		}
+		bestInterp.blipCountString = this.numTokensInStr(bestInterp.string);
 		this.interps.push(bestInterp);	
 	},
 	evalWrongness: function(blips, string) {
@@ -252,28 +254,30 @@ Interpreter.prototype = {
 		var blipCount = interp.blipCount;
 		//may be off by 1
 		var blipCountString = interp.blipCountString;
-		var countBackFrom = Math.min(blipCount, blipCountString);
-		var blipIdx = blipCountString;
+		var countBackFrom = Math.min(blipCount, blipCountString) - 1;
+		var blipIdx = blipCountString - 1;
 		var stopAt = countBackFrom - this.adjustPaceNumBlips;
 		
 		for (var letterIdx=string.length-1; letterIdx>=0; letterIdx--) {
 			var letter = string[letterIdx];
-			var tokens = letterToTokenMap[letter];
+			var tokens = letterToTokensMap[letter];
 			
 			for (var tokenIdx=tokens.length-1; tokenIdx>=0; tokenIdx--) {
 				var token = tokens[tokenIdx];
 				if (blipIdx <= countBackFrom) {
-					if (token == ' ') {
+					if (token == '^') {
 					} else if (token == '/' || token == '-') {
 						unitTimes.push(this.blips[blipIdx].time/3);
 					} else {
 						unitTimes.push(this.blips[blipIdx].time);
 					}
 				}
+				
 				blipIdx--;
 				
 				if (blipIdx < 0 || blipIdx == stopAt) {
 					unitTime = arrayAvg(unitTimes);
+					console.log('new unit time ' + unitTime);
 					return;
 				}
 				
@@ -346,7 +350,7 @@ feedInput([
 	B(0, 5800),
 	B(1, 100),
 	B(0, 300),
-	
+	B(1, 110)
 
 
 ])
