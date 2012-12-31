@@ -1,0 +1,18 @@
+<html>
+<body>
+<script src='listener.js'></script>
+<script src='../jquery-1.7.2.min.js'></script>
+<script>
+	$(document).mousedown(function() {
+		listener.updateValue(0);
+	})
+	$(document).mouseup(function() {
+		listener.updateValue(1);
+	})
+	window.setInterval(function() {
+		listener.listen.apply(listener)
+		}, 10);
+
+</script>
+</body>
+</html>

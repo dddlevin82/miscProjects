@@ -1,9 +1,10 @@
 //0 when on
 //1 when off
-var repl = require('repl');
-var unitTime = 300; //ms
-var extraPenalty = 1;
-var switchingPenalty = 3;
+//var repl = require('repl');
+var unitTime = 200; //ms
+var overPenalty = 1.5;
+var underPenalty = 2;
+var switchingPenalty = 300;
 //var gpio = require('pi-gpio');
 
 var tokenToTimeMap = 
@@ -30,14 +31,18 @@ function Interpretation(string, wrongness) {
 	this.wrongness = wrongness;
 }
 
+function B(isDown, time) {
+	return new Blip(isDown, time);
+}
+
 function Blip(isDown, time) {
-	this.down = isDown;
+	this.isDown = isDown;
 	this.time = time;
 }
 
 Blip.prototype = {
 	wrongness: function(token) {
-		var wrongness = Math.abs(this.down - tokenIsDown[token]) * switchingPenalty;
+		var wrongness = Math.abs(this.isDown - tokenIsDown[token]) * switchingPenalty;
 		if (token == '^') {
 			return wrongness + Math.max(0, tokenToTimeMap[token]() - this.time)/unitTime;
 		}
@@ -80,49 +85,63 @@ var letterToTokensMap =
 
 //gpio.open(16, 'input', function(){});
 
-var interpreter = new Interpreter();
+
 
 
 function Listener() {
 	this.addedLetterEnd = false;
 	this.addedSpace = false;
 	this.timeStart = 0;
-	this.lastValue = 1;
+	this.started = false;
+	this.lastValues = this.makeInitValues(5, 1);
+	this.lastValueIdx = 0;
+	this.value = 1;//for mouse
+	this.lastAdded = 1;
 }
 
 Listener.prototype = {
 	listen: function() {
-		gpio.read(16, function(err, value) {
+		//gpio.read(16, function(err, value) {
+			//1 means up, 0 means down in listener.
+			//if (err) throw err;
+
+			var value = this.value;
 			
-			if (err) throw err;
-			
-			var dTime = Date.now() - this.timeStart;
-			if (value == 1 && dTime > 5 * unitTime) {
-				//making it add a letter end character if it's been up for more than halfway to letter end + space
-				//this will also add more spaces as you wait
-				if (!this.addedLetterEnd) {
-					interpreter.addBlip(value, 3.5 * unitTime);
-					this.timeStart = Date.now() - 1.5 * unitTime; 
-					this.addedLetterEnd = true;
-				} else if (!this.addedSpace && dTime > 7 * unitTime) {
-					interpreter.addBlip(value, 7 * unitTime);
-					this.timeStart = Date.now();
-					this.addedSpace = true;
+			this.lastValues[this.lastValueIdx] = value;
+			this.lastValueIdx ++;
+			if (this.lastValueIdx == this.lastValues.length) {
+				this.lastValueIdx = 0;
+			}
+			var curVal = Math.round(arrayAvg(this.lastValues));
+			if (curVal != this.lastAdded) {
+				var dTime = Date.now() - this.timeStart;
+				this.timeStart = Date.now();
+				this.lastAdded = curVal;
+				if (this.started) {
+					interpreter.addBlip(curVal, dTime);
+					interpreter.print();
+				} else {
+					this.started = true;
 				}
 			}
-			if (value != this.lastValue) {
-				if (!this.addedLetterEnd && !this.addedSpace) {
-					this.timeStart = Date.now()
-					interpreter.addBlip(!value, dTime); // 0->down, 1->up, so have to flip
-				}
-				this.addedLetterEnd = false;
-				this.addedSpace = false;
-			}
-		})
-	}
+
+			 
+
+		//})
+	},
+	updateValue: function(value) {
+		this.value = value; //for mouse
+	},
+	makeInitValues: function(num, value) {
+		var xs = [];
+		for (var i=0; i<num; i++) {
+			xs.push(value);
+		}
+		return xs;
+	},
+	
 }
 
-//should do space as seperate character
 
 function Interpreter() {
 	this.interps = [];
@@ -134,13 +153,25 @@ Interpreter.prototype = {
 		return this.interps[this.interps.length-1].string;
 	},
 	print: function() {
-		console.log(this.interps);
+		//console.log(this.interps);
 		console.log(this.interps[this.interps.length-1].string);
-		console.log(this.interps[this.interps.length-1].wrongness);
+		//console.log(this.interps[this.interps.length-1].wrongness);
 	},
-	addBlip: function(value, dTime) {
-		this.blips.push(new Blip(value, dTime));
-		this.addInterpretation();
+	addBlip: function(isDown, dTime) {
+		console.log('new blip is down: ' + isDown);
+		console.log('new blip time: ' + dTime);
+		var insertLetterEnd = !isDown && dTime > avg(tokenToTimeMap['^']() + tokenToTimeMap['/'](), tokenToTimeMap['/']());
+		
+		if (insertLetterEnd) {
+			console.log('adding letter end with dTime = ' + dTime);
+			this.blips.push(new Blip(isDown, tokenToTimeMap['/']()));
+			this.addInterpretation();
+			this.blips.push(new Blip(isDown, dTime - tokenToTimeMap['/']()));
+			this.addInterpretation();
+		} else {
+			this.blips.push(new Blip(isDown, dTime));
+			this.addInterpretation();
+		}
 	},
 	addInterpretation: function() {
 		var idx = Math.max(0, this.blips.length - 10);
@@ -190,7 +221,7 @@ Interpreter.prototype = {
 		
 			for (var tokenIdx=0; tokenIdx<tokens.length; tokenIdx++) {
 				if (blipIdx == blips.length) {
-					return wrongness + (this.numTokensInStr(string) - blipIdx) * extraPenalty; 
+					return wrongness + (this.numTokensInStr(string) - blipIdx) * overPenalty; 
 				}
 				var blip = blips[blipIdx];
 				wrongness += blip.wrongness(tokens[tokenIdx])
@@ -198,7 +229,7 @@ Interpreter.prototype = {
 			}
 				
 		}
-		return wrongness + (blips.length - blipIdx) * extraPenalty;	
+		return wrongness + (blips.length - blipIdx) * underPenalty;	
 	},
 	numTokensInStr: function(str) {
 		var numTokens = 0;
@@ -209,6 +240,14 @@ Interpreter.prototype = {
 	}
 }
 
+function arrayAvg(array) {
+	var sum = 0;
+	for (var i=0; i<array.length; i++) {
+		sum += array[i];
+	}
+	return sum/array.length;
+}
+
 function myEval(cmd, context, filename, callback) {
 	try {
 		callback(null, eval(cmd));
@@ -216,7 +255,7 @@ function myEval(cmd, context, filename, callback) {
 		callback(e);
 	}
 }
-
+/*
 function testStr(str) {
 	var interpreter = new Interpreter();
 
@@ -239,7 +278,34 @@ function testStr(str) {
 
 	console.log(str);
 }
+*/
+interpreter = new Interpreter();
+listener = new Listener();
+//testStr('e  e  batf');
+function avg(a, b) {
+		return (a + b) / 2;
+}
+function feedInput(blips) {
 
-testStr('e  e  batf');
+	for (var blipIdx=0; blipIdx<blips.length; blipIdx++) {
+		interpreter.addBlip(blips[blipIdx].isDown, blips[blipIdx].time);
+		interpreter.print();
+	}
+}
+/*
+feedInput([
+	B(1, 100),
+	B(0, 400),
+	B(1, 300),
+	B(0, 300),
+	B(1, 100),
+	B(0, 5800),
+	B(1, 100),
+	B(0, 300),
+	
 
-repl.start({eval: myEval});
+
+])
+*/
+
+//repl.start({eval: myEval});
