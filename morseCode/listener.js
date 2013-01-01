@@ -1,11 +1,11 @@
-//0 when on
-//1 when off
+//0 when down
+//1 when up
 //var repl = require('repl');
 var unitTime = 200; //ms
 var overPenalty = 1.5;
 var underPenalty = 2;
 var switchingPenalty = 300;
-//var gpio = require('pi-gpio');
+var gpio = require('pi-gpio');
 
 var tokenToTimeMap = 
 {
@@ -85,7 +85,7 @@ var letterToTokensMap =
 
 
 
-//gpio.open(16, 'input', function(){});
+gpio.open(16, 'input', function(){});
 
 
 
@@ -95,41 +95,39 @@ function Listener() {
 	this.addedSpace = false;
 	this.timeStart = 0;
 	this.started = false;
-	this.lastValues = this.makeInitValues(5, 1);
+	this.lastValues = this.makeInitValues(5, 0);
 	this.lastValueIdx = 0;
-	this.value = 1;//for mouse
-	this.lastAdded = 1;
+	this.value = 0;//for mouse
+	this.lastAdded = 0;
 }
 
 Listener.prototype = {
 	listen: function() {
-		//gpio.read(16, function(err, value) {
-			//1 means up, 0 means down in listener.
-			//if (err) throw err;
-
-			var value = this.value;
-			
-			this.lastValues[this.lastValueIdx] = value;
-			this.lastValueIdx ++;
-			if (this.lastValueIdx == this.lastValues.length) {
-				this.lastValueIdx = 0;
+		var self = this;
+		gpio.read(16, function(err, value) {
+			if (err) throw err;
+			self.lastValues[self.lastValueIdx] = value;
+			self.lastValueIdx ++;
+			if (self.lastValueIdx == self.lastValues.length) {
+				self.lastValueIdx = 0;
 			}
-			var curVal = Math.round(arrayAvg(this.lastValues));
-			if (curVal != this.lastAdded) {
-				var dTime = Date.now() - this.timeStart;
-				this.timeStart = Date.now();
-				this.lastAdded = curVal;
-				if (this.started) {
-					interpreter.addBlip(curVal, dTime);
+			var curVal = Math.round(arrayAvg(self.lastValues));
+			if (curVal != self.lastAdded) {
+				var dTime = Date.now() - self.timeStart;
+				self.timeStart = Date.now();
+				self.lastAdded = curVal;
+				if (self.started) {
+					interpreter.addBlip(!curVal, dTime);
 					interpreter.print();
 				} else {
-					this.started = true;
+					console.log('starting');
+					self.started = true;
 				}
 			}
 
 			 
 
-		//})
+		})
 	},
 	updateValue: function(value) {
 		this.value = value; //for mouse
@@ -329,7 +327,7 @@ function testStr(str) {
 */
 interpreter = new Interpreter();
 listener = new Listener();
-//testStr('e  e  batf');
+
 function avg(a, b) {
 		return (a + b) / 2;
 }
@@ -340,6 +338,13 @@ function feedInput(blips) {
 		interpreter.print();
 	}
 }
+
+function listen() {
+	listener.listen();
+}
+
+setInterval(listen, 10);
+
 /*
 feedInput([
 	B(1, 100),
