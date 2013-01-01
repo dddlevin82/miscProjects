@@ -6,6 +6,8 @@ var overPenalty = 1.5;
 var underPenalty = 2;
 var switchingPenalty = 300;
 var gpio = require('pi-gpio');
+var exec = require('child_process').exec;
+var aplay=exec('aplay');
 
 var tokenToTimeMap = 
 {
@@ -301,32 +303,58 @@ function myEval(cmd, context, filename, callback) {
 		callback(e);
 	}
 }
-/*
-function testStr(str) {
-	var interpreter = new Interpreter();
 
-	var tokens = '';
-	for (var strIdx=0; strIdx<str.length; strIdx++) {
-		tokens += letterToTokensMap[str[strIdx].toUpperCase()];
-	}
-	for (var tokenIdx=0; tokenIdx<tokens.length; tokenIdx++) {
-		var token = tokens[tokenIdx];
-		if (token == '.' || token == '-') {
-			interpreter.addBlip(1, tokenToTimeMap[token]()*(1 + Math.random()*.2-.1));
-		} else if (token == '^' ) {
-			interpreter.addBlip(0, tokenToTimeMap[token]()*.9);
-		} else {
-			interpreter.addBlip(0, tokenToTimeMap[token]());
-		}
-
-	}
-	interpreter.print();
-
-	console.log(str);
+function Player() {
+	this.makeSounds();
+	this.freq = 2000;
 }
-*/
+
+Player.prototype = {
+	play: function(str) {
+		var tOffset = 0;
+		var tokens = strToTokens(str);
+		for (var tokenIdx=0; tokenIdx<tokens.length; tokenIdx++) {
+			var token = tokens[tokenIdx];
+			if (token == '-') {
+				this.playTone(this.dash, tOffset);
+			} else if (token == '.') {
+				this.playTone(this.dot, tOffset);
+			}
+			tOffset += tokenToTimeMap[token]();
+		}
+	},
+	playTone: function(tone, tOffset) {
+		setTimeout(
+	},
+	makeSounds: function() {
+		this.dot = this.makeTone(1);
+		this.dash = this.makeTone(3);
+	},
+	makeTone: function(mult) {
+		var time = mult * unitTime / 1000;
+		var byteRate = 8000;
+		var numBytes = Math.round(time*byteRate);
+		var tone = new Buffer(numBytes);
+		for (var x=0; x<numBytes; x++) {
+			tone[x] = (127*(Math.sin(x*freq/byteRate) + 1)) & 0xff;
+		}
+		return tone;
+	},
+
+
+}
+
 interpreter = new Interpreter();
 listener = new Listener();
+player = new Player();
+
+function strToTokens(str) {
+	var tokens = '';
+	for (var i=0; i<str.length; i++) {
+		tokens += letterToTokensMap[str[i]];
+	}
+	return tokens;
+}
 
 function avg(a, b) {
 		return (a + b) / 2;
