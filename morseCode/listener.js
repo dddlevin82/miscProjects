@@ -277,6 +277,7 @@ Interpreter.prototype = {
 				
 				if (blipIdx < 0 || blipIdx == stopAt) {
 					unitTime = arrayAvg(unitTimes);
+					player.makeSounds();
 					console.log('new unit time ' + unitTime);
 					return;
 				}
@@ -305,42 +306,67 @@ function myEval(cmd, context, filename, callback) {
 }
 
 function Player() {
-	this.makeSounds();
 	this.freq = 2000;
+	this.byteRate = 8000;
+	this.makeSounds();
+	console.log('here');
+	//this.playTone(this.dot, 1000);
 }
 
 Player.prototype = {
 	play: function(str) {
-		var tOffset = 0;
+		var initTimeOffset = 400;
+		var byteOffset = 0;
 		var tokens = strToTokens(str);
+		var time = this.getPlayTime(tokens) + initTimeOffset;
+		var numBytes = this.getNumBytes(time);
+		var tone = new Buffer(numBytes);
+
+		byteOffset += this.getNumBytes(initTimeOffset);
+		
+		tone.fill(127&0xff, 0, byteOffset)
+		
 		for (var tokenIdx=0; tokenIdx<tokens.length; tokenIdx++) {
 			var token = tokens[tokenIdx];
-			if (token == '-') {
-				this.playTone(this.dash, tOffset);
-			} else if (token == '.') {
-				this.playTone(this.dot, tOffset);
+			bytes = this.getNumBytes(tokenToTimeMap[token]());
+			console.log('new starting at ' + byteOffset + ' ending at ' + (byteOffset + bytes));
+			if (token == '.') {
+				console.log('dot')
+				this.dot.copy(tone, byteOffset);
+			} else if (token == '-') {
+				console.log('dash')
+				this.dash.copy(tone, byteOffset)
+			} else {
+				console.log('blank')
+				tone.fill(127&0xff, byteOffset, byteOffset + bytes);
 			}
-			tOffset += tokenToTimeMap[token]();
+			byteOffset += bytes;
 		}
-	},
-	playTone: function(tone, tOffset) {
-		setTimeout(
+		aplay.stdin.write(tone);
 	},
 	makeSounds: function() {
 		this.dot = this.makeTone(1);
 		this.dash = this.makeTone(3);
 	},
 	makeTone: function(mult) {
-		var time = mult * unitTime / 1000;
-		var byteRate = 8000;
-		var numBytes = Math.round(time*byteRate);
+		var time = mult * unitTime;
+		var numBytes = this.getNumBytes(time);
 		var tone = new Buffer(numBytes);
 		for (var x=0; x<numBytes; x++) {
-			tone[x] = (127*(Math.sin(x*freq/byteRate) + 1)) & 0xff;
+			tone[x] = (127*(Math.sin(x*this.freq/this.byteRate) + 1)) & 0xff;
 		}
 		return tone;
 	},
-
+	getNumBytes: function(time) {//ms
+		return Math.round(time*this.byteRate/1000);
+	},
+	getPlayTime: function(tokens) {
+		var time = 0;
+		for (var tokenIdx=0; tokenIdx<tokens.length; tokenIdx++) {
+			time += tokenToTimeMap[tokens[tokenIdx]]();
+		}
+		return time;
+	}
 
 }
 
@@ -348,10 +374,13 @@ interpreter = new Interpreter();
 listener = new Listener();
 player = new Player();
 
+
+player.play('apple');
+
 function strToTokens(str) {
 	var tokens = '';
 	for (var i=0; i<str.length; i++) {
-		tokens += letterToTokensMap[str[i]];
+		tokens += letterToTokensMap[str[i].toUpperCase()];
 	}
 	return tokens;
 }
