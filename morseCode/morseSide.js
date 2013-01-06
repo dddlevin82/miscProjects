@@ -169,18 +169,66 @@ TapListener.prototype = {
 	
 }
 
-function PacketListener: function() {
-	this.msgs = [];
+server.on('message', function(msg, err) {
+	var type = toStrFromASCII(msg.slice(0, 1));
+	var idx = msg.readUInt32LE(1);
+	var string = toStrFromASCII(msg.slice(5, msg.length));
+	if (type == 's') {
+		player.enquene(idx, string); //player is equivilant to receiver on text side
+	} else if (type == 'r') {
+		sender.sendWithIdx(idx, string);
+	}
+})
+
+//requests strings from the text side starting at the last hole
+//if all messages are already received, text side will send nothing back because receivedTo == last msg idx on text side
+function Requester() {
+
 }
-PacketListener.prototype = {
-	receive: function(packet) {
-		var msg = parsePacket(packet);
-		if (!this.msgs[msg.idx]) {
-			this.msgs[msg.idx] = msg;
-			player.enquene(msg);
-		}
+
+Requester.prototype = {
+	request: function() {
+		var type = 'r';	
+		var idx = player.getReceivedTo();
+		var toSend = new Buffer(5);
+		toSend.write(type);
+		toSend.writeUInt32LE(idx, 1);
+		client.send(toSend, 0, toSend.length, 1234, '127.0.0.1');
 	}
 }
+
+
+function Sender() {
+	
+}
+
+Sender.prototype = {
+	sendWithIdx: function(idx, string) {
+		var interpStr = interpreter.getStr();
+		if (string != interpStr.slice(interpStr.length-10, interpStr.length)) {
+			this.sendStartingAt(Math.max(0, idx-10));
+		}
+	},
+	sendStartingAt: function(idx) {
+		var str = interpreter.getStr().slice(idx, str.length);
+		var toSend = new Buffer(5 + str.length);
+		toSend.write('s');
+		toSend.writeUInt32LE(idx, 1);
+		toSend.write(str, 5);
+		client.send(toSend, 0, toSend.length, 1234, '127.0.0.1');
+	}
+	
+}
+
+function toStrFromASCII(ASCII) {
+	var str = '';
+	for (var byteIdx=0; byteIdx<ASCII.length; byteIdx++) {
+		str += String.fromCharCode(ASCII[byteIdx]);
+	}
+	return str;
+}
+
+
 
 
 function Interpreter() {
@@ -190,7 +238,8 @@ function Interpreter() {
 }
 
 Interpreter.prototype = {
-	getLastStr: function() {
+	getStr: function(idx) {
+		if (idx) return this.interps[idx].string;
 		return this.interps[this.interps.length-1].string;
 	},
 	print: function() {
@@ -216,18 +265,6 @@ Interpreter.prototype = {
 		if (this.blips.length%10 == 0) {
 			this.adjustPace();
 		}
-		this.sendInterp();
-	},
-	sendInterp: function() {
-		//format: 's' or 'r', idx, message
-		//s -> sending, r -> recipt
-		var interp = this.interps[this.interps.length-1];
-		var str = interp.string;
-		var toSend = new Buffer(5 + str.length);
-		toSend.write('s', 0);
-		toSend.writeUInt32LE(this.interps.length-1, 1);
-		toSend.write(str, 5);
-		client.send(toSend, 0, toSend.length, 1234, '127.0.0.1');
 	},
 	addInterpretation: function() {
 		var idx = Math.max(0, this.blips.length - 10);
@@ -356,6 +393,8 @@ function myEval(cmd, context, filename, callback) {
 }
 
 function Player() {
+	this.receivedTo = -1;
+	this.lastPlayedIdx = -1; 
 	this.quene = [];
 	this.playing = false;
 	this.freq = 2000;
@@ -366,20 +405,24 @@ function Player() {
 }
 
 Player.prototype = {
-	enquene: function(msg) {
+	enquene: function(idx, str) {
 		var quene = this.quene;
+		var spliceIdx = this.quene.length;
 		for (var queneIdx=quene.length; queneIdx>-1; queneIdx--) {
-			if (msg.idx < quene[queneIdx].idx) {
-				quene.splice(queneIdx+1, 0, msg);
+			if (quene[queneIdx] < idx) {
+				spliceIdx = queneIdx + 1;
 			}
 		}
+		quene.splice(splice, 0, new this.message(idx, str));
+		this.updateReceivedTo();
 		this.playNext();
 	},
 	playNext: function() {
 		var msg = this.quene[0];
-		if (msg) {
+		if (msg && msg.idx == this.lastPlayedIdx + 1) {
 			this.quene.splice(0, 1);
 			this.play(msg.string);
+			this.lastPlayedIdx++;
 		}
 	},
 	play: function(str) {
@@ -408,6 +451,22 @@ Player.prototype = {
 		}
 		aplay.stdin.write(tone);
 	},
+	updateReceivedTo: function() {
+		var quene = this.quene;
+		var recdIdx = this.lastPlayedIdx;
+		for (var queneIdx=0; queneIdx<quene.length; queneIdx++) {
+			if (quene[queneIdx].idx != recdIdx + 1) {
+				this.receivedTo = recdIdx;
+				return;
+			}
+			recdIdx++;
+		}
+		return;
+		
+	},
+	getReceivedTo: function() {
+		return this.receivedTo;
+	},
 	makeTones: function() {
 		this.dot = this.makeTone(1);
 		this.dash = this.makeTone(3);
@@ -431,8 +490,14 @@ Player.prototype = {
 		}
 		return time;
 	}
+	message: function(idx, string) {
+		this.idx = idx;
+		this.string = string;
+	}
 
 }
+
+
 //gpio.open(16, 'input', function(){});
 interpreter = new Interpreter();
 tapListener = new TapListener();
@@ -463,13 +528,17 @@ function feedInput(blips) {
 function listen() {
 	tapListener.listen();
 }
+function request() {
+	requester.request();
+}
+
 
 server.on('message', function(msg, err) {
 	
 })
 
-//setInterval(listen, 10);
-
+setInterval(listen, 10);
+setInterval(request, 50);
 
 feedInput([
 	B(1, 100),
