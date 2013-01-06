@@ -1,6 +1,6 @@
 //0 when down
 //1 when up
-//var repl = require('repl');
+var repl = require('repl');
 
 var dgram = require('dgram');
 
@@ -11,9 +11,9 @@ var unitTime = 200; //ms
 var overPenalty = 1.5;
 var underPenalty = 2;
 var switchingPenalty = 300;
-var gpio = require('pi-gpio');
+//var gpio = require('pi-gpio');
 var exec = require('child_process').exec;
-var aplay = exec('aplay');
+//var aplay = exec('aplay');
 
 var tokenToTimeMap = 
 {
@@ -33,6 +33,13 @@ var tokenIsDown =
 	'/': 0,
 	'^': 0
 }
+
+function Message(type, idx, string) {
+	this.type = type;
+	this.idx = idx;
+	this.string = string;
+}
+
 
 function Interpretation(string, wrongness, blipCountString, blipCount) {
 	this.string = string;
@@ -93,12 +100,24 @@ var letterToTokensMap =
 
 
 
-gpio.open(16, 'input', function(){});
+
+function parsePacket(packet) {
+	var type = packet[0];
+	var idx = packet.readUInt32LE(1);
+	var string = toStrFromASCII(packet.slice(5, packet.length));
+	return new Message(type, idx, string);
+}
+
+function toStrFromASCII(ASCII) {
+	var str = '';
+	for (var byteIdx=0; byteIdx<ASCII.length; byteIdx++) {
+		str += String.fromCharCode(ASCII[byteIdx]);
+	}
+	return str;
+}
 
 
-
-
-function Listener() {
+function TapListener() {
 	this.addedLetterEnd = false;
 	this.addedSpace = false;
 	this.timeStart = 0;
@@ -109,7 +128,7 @@ function Listener() {
 	this.lastAdded = 0;
 }
 
-Listener.prototype = {
+TapListener.prototype = {
 	listen: function() {
 		var self = this;
 		gpio.read(16, function(err, value) {
@@ -150,6 +169,19 @@ Listener.prototype = {
 	
 }
 
+function PacketListener: function() {
+	this.msgs = [];
+}
+PacketListener.prototype = {
+	receive: function(packet) {
+		var msg = parsePacket(packet);
+		if (!this.msgs[msg.idx]) {
+			this.msgs[msg.idx] = msg;
+			player.enquene(msg);
+		}
+	}
+}
+
 
 function Interpreter() {
 	this.interps = [];
@@ -184,6 +216,18 @@ Interpreter.prototype = {
 		if (this.blips.length%10 == 0) {
 			this.adjustPace();
 		}
+		this.sendInterp();
+	},
+	sendInterp: function() {
+		//format: 's' or 'r', idx, message
+		//s -> sending, r -> recipt
+		var interp = this.interps[this.interps.length-1];
+		var str = interp.string;
+		var toSend = new Buffer(5 + str.length);
+		toSend.write('s', 0);
+		toSend.writeUInt32LE(this.interps.length-1, 1);
+		toSend.write(str, 5);
+		client.send(toSend, 0, toSend.length, 1234, '127.0.0.1');
 	},
 	addInterpretation: function() {
 		var idx = Math.max(0, this.blips.length - 10);
@@ -283,7 +327,7 @@ Interpreter.prototype = {
 				
 				if (blipIdx < 0 || blipIdx == stopAt) {
 					unitTime = arrayAvg(unitTimes);
-					player.makeSounds();
+					player.makeTones();
 					console.log('new unit time ' + unitTime);
 					return;
 				}
@@ -312,14 +356,32 @@ function myEval(cmd, context, filename, callback) {
 }
 
 function Player() {
+	this.quene = [];
+	this.playing = false;
 	this.freq = 2000;
 	this.byteRate = 8000;
-	this.makeSounds();
+	this.makeTones();
 	console.log('here');
 	//this.playTone(this.dot, 1000);
 }
 
 Player.prototype = {
+	enquene: function(msg) {
+		var quene = this.quene;
+		for (var queneIdx=quene.length; queneIdx>-1; queneIdx--) {
+			if (msg.idx < quene[queneIdx].idx) {
+				quene.splice(queneIdx+1, 0, msg);
+			}
+		}
+		this.playNext();
+	},
+	playNext: function() {
+		var msg = this.quene[0];
+		if (msg) {
+			this.quene.splice(0, 1);
+			this.play(msg.string);
+		}
+	},
 	play: function(str) {
 		var initTimeOffset = 400;
 		var byteOffset = 0;
@@ -335,22 +397,18 @@ Player.prototype = {
 		for (var tokenIdx=0; tokenIdx<tokens.length; tokenIdx++) {
 			var token = tokens[tokenIdx];
 			bytes = this.getNumBytes(tokenToTimeMap[token]());
-			console.log('new starting at ' + byteOffset + ' ending at ' + (byteOffset + bytes));
 			if (token == '.') {
-				console.log('dot')
 				this.dot.copy(tone, byteOffset);
 			} else if (token == '-') {
-				console.log('dash')
 				this.dash.copy(tone, byteOffset)
 			} else {
-				console.log('blank')
 				tone.fill(127&0xff, byteOffset, byteOffset + bytes);
 			}
 			byteOffset += bytes;
 		}
 		aplay.stdin.write(tone);
 	},
-	makeSounds: function() {
+	makeTones: function() {
 		this.dot = this.makeTone(1);
 		this.dash = this.makeTone(3);
 	},
@@ -375,13 +433,13 @@ Player.prototype = {
 	}
 
 }
-
+//gpio.open(16, 'input', function(){});
 interpreter = new Interpreter();
-listener = new Listener();
+tapListener = new TapListener();
 player = new Player();
 
 
-player.play('apple');
+//player.play('apple');
 
 function strToTokens(str) {
 	var tokens = '';
@@ -403,12 +461,16 @@ function feedInput(blips) {
 }
 
 function listen() {
-	listener.listen();
+	tapListener.listen();
 }
 
-setInterval(listen, 10);
+server.on('message', function(msg, err) {
+	
+})
 
-/*
+//setInterval(listen, 10);
+
+
 feedInput([
 	B(1, 100),
 	B(0, 400),
@@ -422,6 +484,6 @@ feedInput([
 
 
 ])
-*/
 
-//repl.start({eval: myEval});
+
+repl.start({eval: myEval});
