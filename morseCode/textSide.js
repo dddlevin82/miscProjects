@@ -1,20 +1,24 @@
 //0 when down
 //1 when up
-//var repl = require('repl');
+var repl = require('repl');
 
 var dgram = require('dgram');
-
+clientIP = '192.168.2.23';
+clientPort = 2345;
 var server = dgram.createSocket('udp4');
 var client = dgram.createSocket('udp4');
 
 server.on('message', function(msg, err) {
+	console.log('got message');
 	var type = toStrFromASCII(msg.slice(0, 1));
+	console.log(type);
+	console.log(msg.readInt32LE(1));
 	if (type == 's' ) {
-		var idx = msg.readUInt32LE(1);
+		var idx = msg.readInt32LE(1);
 		var msg = toStrFromASCII(msg.slice(5, msg.length));
 		receiver.receive(idx, msg);
 	} else if (type == 'r') {
-		var sendAfterIdx = msg.readUInt32LE(1);
+		var sendAfterIdx = msg.readInt32LE(1);
 		sender.sendStartingAfter(sendAfterIdx);
 	}
 
@@ -40,8 +44,9 @@ Receiver.prototype = {
 		this.msg = this.msg.slice(0, idx) + msg;
 		console.log(this.msg);
 	},
-	last10: function() {
-		return this.msg.slice(this.msg.length - 10, this.msg.length);
+
+	getMsg: function() {
+		return this.msg;
 	},
 
 }
@@ -54,14 +59,18 @@ function Requester() {
 Requester.prototype = {
 	request: function() {
 		var type = 'r';
-		var idx = this.msg.length - 1;
-		var last10 = this.last10();
+		var msg = receiver.getMsg();
+		var idx = msg.length - 1;
+		var last10 = this.last10(msg);
 		var req = new Buffer(15);
-		req.write(type.charCodeAt(0));
-		req.writeUInt32LE(idx, 1);
+		req.write(type);
+		req.writeInt32LE(idx, 1);
 		req.write(last10, 5);
-		client.send(req, 0, req.length, 2345, '127.0.0.1');
-	}
+		client.send(req, 0, req.length, clientPort, clientIP);
+	},
+	last10: function(str) {
+		return str.slice(str.length - 10, str.length);
+	},
 }
 
 //sends strings to the morse code side
@@ -72,13 +81,13 @@ function Sender() {
 Sender.prototype = {
 	//touch
 	addMsg: function(str) {
-		this.msgs.push(this.sanitizeStr(str);
+		this.msgs.push(this.sanitizeStr(str));
 	},
 	send: function(idx) {
 		if (!idx) idx = this.msgs.length - 1;
 		var str = this.msgs[idx];
 		var toSend = makeBuffer('s', idx, str);
-		client.send(buffer, 0, toSend, 2345, '127.0.0.1');
+		client.send(buffer, 0, toSend, clientPort, clientIP);
 	},
 	sendStartingAfter: function(idx) {
 		for (var msgIdx=idx + 1; msgIdx<this.msgs.length; msgIdx++) {
@@ -88,7 +97,7 @@ Sender.prototype = {
 	makeBuffer: function(dir, idx, str) {
 		var buffer = new Buffer(5 + str.length);
 		buffer.write('s');
-		buffer.writeUInt32LE(idx, 1);
+		buffer.writeInt32LE(idx, 1);
 		buffer.write(str, 5);
 		return buffer;
 	},
@@ -171,4 +180,4 @@ feedInput([
 ])
 */
 
-//repl.start({eval: myEval});
+repl.start({eval: myEval});

@@ -1,7 +1,9 @@
 //0 when down
 //1 when up
-var repl = require('repl');
-
+//var repl = require('repl');
+clientIP = '192.168.2.19';
+clientPort = 1234;
+clientPort = 1234;
 var dgram = require('dgram');
 
 var server = dgram.createSocket('udp4');
@@ -11,9 +13,9 @@ var unitTime = 200; //ms
 var overPenalty = 1.5;
 var underPenalty = 2;
 var switchingPenalty = 300;
-//var gpio = require('pi-gpio');
+var gpio = require('pi-gpio');
 var exec = require('child_process').exec;
-//var aplay = exec('aplay');
+var aplay = exec('aplay');
 
 var tokenToTimeMap = 
 {
@@ -103,7 +105,7 @@ var letterToTokensMap =
 
 function parsePacket(packet) {
 	var type = packet[0];
-	var idx = packet.readUInt32LE(1);
+	var idx = packet.readInt32LE(1);
 	var string = toStrFromASCII(packet.slice(5, packet.length));
 	return new Message(type, idx, string);
 }
@@ -171,8 +173,11 @@ TapListener.prototype = {
 
 server.on('message', function(msg, err) {
 	var type = toStrFromASCII(msg.slice(0, 1));
-	var idx = msg.readUInt32LE(1);
+	var idx = msg.readInt32LE(1);
 	var string = toStrFromASCII(msg.slice(5, msg.length));
+	// console.log(type);
+	// console.log(idx);
+	// console.log(string);
 	if (type == 's') {
 		player.enquene(idx, string); //player is equivilant to receiver on text side
 	} else if (type == 'r') {
@@ -192,8 +197,8 @@ Requester.prototype = {
 		var idx = player.getReceivedTo();
 		var toSend = new Buffer(5);
 		toSend.write(type);
-		toSend.writeUInt32LE(idx, 1);
-		client.send(toSend, 0, toSend.length, 1234, '127.0.0.1');
+		toSend.writeInt32LE(idx, 1);
+		client.send(toSend, 0, toSend.length, clientPort, clientIP);
 	}
 }
 
@@ -210,12 +215,13 @@ Sender.prototype = {
 		}
 	},
 	sendStartingAt: function(idx) {
-		var str = interpreter.getStr().slice(idx, str.length);
+		var str = interpreter.getStr()//.slice(idx, str.length);
+		console.log(str);
 		var toSend = new Buffer(5 + str.length);
 		toSend.write('s');
-		toSend.writeUInt32LE(idx, 1);
+		toSend.writeInt32LE(idx, 1);
 		toSend.write(str, 5);
-		client.send(toSend, 0, toSend.length, 1234, '127.0.0.1');
+		client.send(toSend, 0, toSend.length, clientPort, clientIP);
 	}
 	
 }
@@ -232,7 +238,7 @@ function toStrFromASCII(ASCII) {
 
 
 function Interpreter() {
-	this.interps = [];
+	this.interps = [new Interpretation('', 0, 0, 0)];
 	this.blips = [];
 	this.adjustPaceNumBlips = 20;
 }
@@ -240,6 +246,7 @@ function Interpreter() {
 Interpreter.prototype = {
 	getStr: function(idx) {
 		if (idx) return this.interps[idx].string;
+		if (this.interps.length == 0) return '';
 		return this.interps[this.interps.length-1].string;
 	},
 	print: function() {
@@ -267,24 +274,21 @@ Interpreter.prototype = {
 		}
 	},
 	addInterpretation: function() {
-		var idx = Math.max(0, this.blips.length - 10);
+		var interpIdx = Math.max(0, this.blips.length - 10);
 		var nextInterps = [];
-		for (; idx<this.blips.length; idx++) {
+		for (; interpIdx<this.blips.length; interpIdx++) {
 			var minWrongness = Number.MAX_VALUE;
 			var bestStr = '';
-			var prevInterp = this.interps[idx-1];
-			if (!prevInterp) {
-				var prevWrongness = 0;
-				var prevStr = '';
-				var prevBlipCount = 0;
-			} else {
-				var prevWrongness = prevInterp.wrongness;
-				var prevStr = prevInterp.string;
-				var prevBlipCount = prevInterp.prevBlipCount;
-			}
+			var prevInterp = this.interps[interpIdx];
+			console.log(this.interps);
+			console.log(prevInterp);
+			var prevWrongness = prevInterp.wrongness;
+			var prevStr = prevInterp.string;
+			var prevBlipCount = prevInterp.prevBlipCount;
+			
 			for (var letter in letterToTokensMap) {
 				
-				var wrongness = this.evalWrongness(this.blips.slice(idx, this.blips.length), letter);
+				var wrongness = this.evalWrongness(this.blips.slice(interpIdx, this.blips.length), letter);
 			
 				if (wrongness + prevWrongness < minWrongness) {
 					minWrongness = wrongness + prevWrongness;
@@ -400,7 +404,6 @@ function Player() {
 	this.freq = 2000;
 	this.byteRate = 8000;
 	this.makeTones();
-	console.log('here');
 	//this.playTone(this.dot, 1000);
 }
 
@@ -489,7 +492,7 @@ Player.prototype = {
 			time += tokenToTimeMap[tokens[tokenIdx]]();
 		}
 		return time;
-	}
+	},
 	message: function(idx, string) {
 		this.idx = idx;
 		this.string = string;
@@ -498,11 +501,17 @@ Player.prototype = {
 }
 
 
-//gpio.open(16, 'input', function(){});
+server.bind(2345);
+
+gpio.open(16, 'input', function(){});
 interpreter = new Interpreter();
 tapListener = new TapListener();
 player = new Player();
+requester = new Requester();
+sender = new Sender();
 
+setInterval(listen, 10);
+setInterval(request, 50);
 
 //player.play('apple');
 
@@ -532,14 +541,7 @@ function request() {
 	requester.request();
 }
 
-
-server.on('message', function(msg, err) {
-	
-})
-
-setInterval(listen, 10);
-setInterval(request, 50);
-
+/*
 feedInput([
 	B(1, 100),
 	B(0, 400),
@@ -553,6 +555,6 @@ feedInput([
 
 
 ])
+*/
 
-
-repl.start({eval: myEval});
+//repl.start({eval: myEval});

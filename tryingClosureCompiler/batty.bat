@@ -1,0 +1,1 @@
+java -jar ../../compiler.jar --compilation_level SIMPLE_OPTIMIZATIONS --js draw.js --js_output_file draw-compiled.js
