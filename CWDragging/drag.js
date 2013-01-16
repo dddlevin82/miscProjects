@@ -13,16 +13,20 @@ Dragger.prototype = {
 			this.frameObjs.push(new this.Frame(this, frameDivs[frameIdx]));
 			var frameObj = this.frameObjs[this.frameObjs.length-1];
 			var frameDiv = frameDivs[frameIdx];
-			var dragElems = $(frameDiv).children();
-			for (var dragElemIdx=0; dragElemIdx<dragElems.length; dragElemIdx++) {
-				var dragElem = dragElems[dragElemIdx];
-				var dragElemId = $(dragElem).attr('id');
-				frameObj.addElem(new this.DragElem(this, $('#' + dragElemId), frameDiv)); 
+			var children = $(frameDiv).children();
+			for (var childIdx=0; childIdx<children.length; childIdx++) {
+				var child = children[childIdx];
+				if ($(child).attr('class') == 'folderElem') {
+					var dragElemId = $(child).attr('id');
+					frameObj.addElem(new this.DragElem(this, $('#' + dragElemId), frameDiv)); 
+				}
 			}
 			frameObj.init();
+			var dragElems = frameObj.dragElems;
+			
 			for (var dragElemIdx=0; dragElemIdx<dragElems.length; dragElemIdx++) {
 				
-				this.assignDrag(frameObj, frameObj.dragElems[dragElemIdx], frameObj.dragElems[dragElemIdx].elem);
+				this.assignDrag(frameObj, dragElems[dragElemIdx], dragElems[dragElemIdx].elem);
 			}
 		}
 	},
@@ -37,27 +41,30 @@ Dragger.prototype = {
 			var mouseYo = e.pageY;
 			var dxLast = 0;
 			var dyLast = 0;
-			var offseto = $(dragElem).offset();
-			var offsetXo = offseto.left;
-			var offsetYo = offseto.top;
+			var poso = $(dragElem).position();
+			var relPos = dragElemObj.poso;
+			var relPosX = relPos.left;
+			var relPosY = relPos.top;
+			var posXo = poso.left;
+			var posYo = poso.top;
 			self.selectedObj = dragElemObj;
 			var moveFunc = function(e) {
 				var dx = e.pageX - mouseXo;
 				var dy = e.pageY - mouseYo;
-				var curX = offsetXo + dx;
-				var curY = offsetYo + dy;
+				var curX = posXo + dx - relPosX;
+				var curY = posYo + dy - relPosY;
 				var oldIdx = dragElemObj.idx;
 				var newIdx = undefined;
 				
 				for (var elemIdx=0; elemIdx<elemYs.length; elemIdx++) {
 					var midPtY = elemYs[elemIdx] + elemHeights[elemIdx]/2;
 					if (elemIdx < oldIdx) {
-						if (curY <= midPtY) {
+						if (curY + relPosY <= midPtY) {
 							var newIdx = elemIdx;
 							break;
 						}
 					} else if (elemIdx > oldIdx) {
-						if (curY + elemHeights[oldIdx] >= midPtY) {
+						if (curY + relPosY + elemHeights[oldIdx] >= midPtY) {
 							var newIdx = elemIdx;
 							break;
 						}
@@ -76,17 +83,17 @@ Dragger.prototype = {
 				$(dragElem).css({left: curX, top: curY})
 				
 			}
-			$(window).mousemove(moveFunc);
+			$(document).mousemove(moveFunc);
 			var upFunc = function() {
 				self.selectedObj = undefined;
-				$(window).unbind('mousemove', moveFunc);
-				$(window).unbind('mouseup', upFunc);
+				$(document).unbind('mousemove', moveFunc);
+				$(document).unbind('mouseup', upFunc);
 				frameObj.flyToPositions(function() {
 					$(dragElem).css({'z-index': 0})
 				});
 				self.updateServer(frameObj);
 			}
-			$(window).mouseup(upFunc);
+			$(document).mouseup(upFunc);
 		})
 
 	},
@@ -100,6 +107,7 @@ Dragger.prototype = {
 	DragElem: function(dragger, elem, id, parentDiv) {
 		this.dragger = dragger;
 		this.elem = elem;
+		this.poso = $(elem).position();
 		this.parentDiv = parentDiv;
 		this.idx = undefined;
 	},
@@ -110,7 +118,7 @@ Dragger.prototype = {
 			var dragElem = frameObj.dragElems[dragElemIdx].elem;
 			elemIds.push($(dragElem).attr('id'));
 		}
-		console.log(frameId + '!' + elemIds.join('.'));
+		//console.log(frameId + '!' + elemIds.join('.'));
 	}
 }
 
@@ -119,14 +127,14 @@ Dragger.prototype.Frame.prototype = {
 		var totalHeight = 0;
 		for (var elemIdx=0; elemIdx<this.dragElems.length; elemIdx++) {
 			var elem = this.dragElems[elemIdx].elem;
-			var offset = $(elem).offset();
-			$(elem).css({top: offset.top, left: offset.left});
+			var pos = $(elem).position();
+			$(elem).css({top: 0, left: 0});
 			totalHeight += $(elem).outerHeight();
 		}
 
 		for (var elemIdx=0; elemIdx<this.dragElems.length; elemIdx++) {
 			var elem = this.dragElems[elemIdx].elem;
-			$(elem).css({position: 'absolute'});
+			$(elem).css({position: 'relative'});
 		}
 		$(this.elem).css({height: totalHeight});
 		this.makeMasks();
@@ -141,17 +149,17 @@ Dragger.prototype.Frame.prototype = {
 			var id = $(elem).attr('id');
 			var img = $('#' + id + 'dragImg');
 			var pos = $(img).position();
-			var width = document.getElementById(id + 'dragImg').naturalWidth;
-			var height = document.getElementById(id + 'dragImg').naturalHeight;
+			var width = $('#' + id + 'dragImg').width();
+			var height = $('#' + id + 'dragImg').height();
 			$(elem).append("<div id='" + id + "dragMask'></div");
-			$('#' + id + 'dragMask').css({top: pos.top, left: pos.left, width: width, height: height, position: 'absolute', 'background-color': 'black', 'z-index': 1000, opacity: 0});
+			$('#' + id + 'dragMask').css({top: pos.top, left: pos.left, width: width, height: height, position: 'absolute', 'z-index': 1000, 'background-color': 'black', opacity: 0});
 			this.dragMasks.push($('#' + id + 'dragMask'));
 		}
 	},
 	getElemYs: function() {
 		var ys = [];
 		for (var elemIdx=0; elemIdx<this.dragElems.length; elemIdx++) {
-			ys.push($(this.dragElems[elemIdx].elem).offset().top);
+			ys.push($(this.dragElems[elemIdx].elem).position().top);
 		}
 		return ys;
 	},
@@ -168,7 +176,7 @@ Dragger.prototype.Frame.prototype = {
 			for (var j=0; j<elems.length-1; j++) {
 				var a = elems[j].elem;
 				var b = elems[j+1].elem;
-				if ($(a).offset().top > $(b).offset().top) {
+				if ($(a).position().top > $(b).position().top) {
 					elems[j] = b;
 					elems[j+1] = a;
 				}
@@ -190,7 +198,11 @@ Dragger.prototype.Frame.prototype = {
 		}
 	},
 	getULOffset: function() {
-		return $(this.dragElems[0].elem).offset();
+		if (this.dragElems[0]) {
+			return $(this.dragElems[0].elem).position();
+		} else {
+			return {top: 0, left: 0};
+		}
 	},
 	flyToPositions: function(cb) {
 		var ULOffset = this.ULOffset;
@@ -199,9 +211,10 @@ Dragger.prototype.Frame.prototype = {
 		for (var elemIdx=0; elemIdx<this.dragElems.length; elemIdx++) {
 			var elem = this.dragElems[elemIdx];
 			if (elem != this.dragger.selectedObj) {
-				var offset = $(elem.elem).offset();
-				if (offset.top != newOffset.top || offset.left != newOffset.left) {
-					$(elem.elem).animate({top: newOffset.top, left: newOffset.left}, this.dragger.animTime, undefined, cb);
+				var relOffset = elem.poso;
+				var pos = $(elem.elem).position();
+				if (pos.top != newOffset.top || pos.left != newOffset.left) {
+					$(elem.elem).animate({top: newOffset.top - relOffset.top, left: newOffset.left - relOffset.left}, this.dragger.animTime, undefined, cb);
 				}
 			}
 			newOffset.top += heights[elemIdx];
@@ -215,6 +228,6 @@ Dragger.prototype.Frame.prototype = {
 Dragger.prototype.DragElem.prototype = {
 
 }
-$(function() {
+$(window).load(function() {
 	dragger = new Dragger();
 })
