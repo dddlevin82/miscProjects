@@ -104,6 +104,14 @@ Dragger.prototype = {
 				var dragMidPt = $(dragElem).offset().top + dragHeight/2;
 				var inFrame = dragMidPt > frameOffsetTop - 5 && dragMidPt < frameOffsetTop + frameHeight + 5;
 				if (inFrame) {
+					if (self.displaced.up) {
+						self.undisplace(self.displaced.up);
+						self.displaced.up = undefined;
+					}
+					if (self.displaced.down) {
+						self.undisplace(self.displaced.down);
+						self.displaced.down = undefined;
+					}
 					for (var elemIdx=0; elemIdx<elemYs.length; elemIdx++) {
 						var midPtY = elemYs[elemIdx] + elemHeights[elemIdx]/2;
 						if (elemIdx < oldIdx) {
@@ -141,15 +149,16 @@ Dragger.prototype = {
 							self.displaced.down = undefined;
 						}
 						if (frame.dragElems[displaceIdx - 1]) {
-							self.displaced.up = frame.dragElems[displaceIdx].elem;
+							self.displaced.up = frame.dragElems[displaceIdx-1].elem;
 						} else {
 							self.displaced.up = undefined;
 						}
 						
-						if (self.displaced.up != oldDisplacedUp) {
-							if (oldDisplacedUp) self.undisplace(oldDisplacedUp);
+						if (oldDisplacedUp != self.displaced.up && oldDisplacedUp != self.displaced.down) {
+							if (oldDisplacedUp)	self.undisplace(oldDisplacedUp);
+													
 						}
-						if (self.displaced.down != oldDisplacedDown) {
+						if (oldDisplacedDown != self.displaced.down && oldDisplacedDown != self.displaced.up) {
 							if (oldDisplacedDown) self.undisplace(oldDisplacedDown);
 						}
 						if (self.displaced.down != oldDisplacedDown) {
