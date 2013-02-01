@@ -13,6 +13,7 @@ Dragger.prototype = {
 			this.frameObjs.push(new this.Frame(this, frameDivs[frameIdx]));
 			var frameObj = this.frameObjs[this.frameObjs.length-1];
 			var frameDiv = frameDivs[frameIdx];
+			$(frameDiv).css('position', 'relative');
 			var children = $(frameDiv).children();
 			for (var childIdx=0; childIdx<children.length; childIdx++) {
 				var child = children[childIdx];
@@ -26,11 +27,39 @@ Dragger.prototype = {
 			
 			for (var dragElemIdx=0; dragElemIdx<dragElems.length; dragElemIdx++) {
 				
-				this.assignDrag(frameObj, dragElems[dragElemIdx], dragElems[dragElemIdx].elem);
+				this.assignDrag(frameObj, frameDiv, dragElems[dragElemIdx], dragElems[dragElemIdx].elem);
 			}
 		}
 	},
-	assignDrag: function(frameObj, dragElemObj, dragElem) {
+	getFrameIdx: function(dragDiv) {
+		for (var frameIdx=0; frameIdx<this.frameObjs.length; frameIdx++) {
+			var frameDiv = this.frameObjs[frameIdx].elem;
+			var dragHeight = $(dragDiv).outerHeight();
+			var dragMidPt = $(dragDiv).offset().top + dragHeight/2;
+			var frameTop = $(frameDiv).offset().top;
+			var frameHeight = $(frameDiv).outerHeight();
+			if (frameTop <= dragMidPt && frameTop + frameHeight >= dragMidPt) {
+				return frameIdx;
+			}
+		}
+		return undefined;
+	},
+	//will return the index it would fall to if released.  Divs on the index will be pushed up one
+	getDisplaceIdx: function(frameObj, dragDiv) {
+		var frameElems = frameObj.dragElems;
+		var dragMidPt = $(dragDiv).offset().top + $(dragDiv).outerHeight()/2;
+		for (var frameElemIdx=0; frameElemIdx<frameElems.length; frameElemIdx++) {
+			var frameElem = frameElems[frameElemIdx].elem;
+			var midPt = $(frameElem).offset().top + $(frameElem).outerHeight()/2;
+
+			if (dragMidPt <= midPt) {
+				return frameElemIdx;
+			} else if (frameElemIdx == frameElems.length-1 && midPt >= $(frameElem).offset().top + $(frameElem).outerHeight()/2) {
+				return frameElems.length;
+			}
+		}
+	},
+	assignDrag: function(frameObj, frameDiv, dragElemObj, dragElem) {
 		var self = this;
 		var dragMask = $('#' + $(dragElem).attr('id') + 'dragMask')[0];
 		$(dragMask).mousedown(function(e) {
@@ -41,45 +70,55 @@ Dragger.prototype = {
 			var mouseYo = e.pageY;
 			var dxLast = 0;
 			var dyLast = 0;
-			var poso = $(dragElem).position();
-			var relPos = dragElemObj.poso;
-			var relPosX = relPos.left;
-			var relPosY = relPos.top;
-			var posXo = poso.left;
-			var posYo = poso.top;
+			var posO = $(dragElem).position();
+			var posXo = posO.left;
+			var posYo = posO.top;
 			self.selectedObj = dragElemObj;
 			var moveFunc = function(e) {
 				var dx = e.pageX - mouseXo;
 				var dy = e.pageY - mouseYo;
-				var curX = posXo + dx - relPosX;
-				var curY = posYo + dy - relPosY;
+				var curX = posXo + dx;
+				var curY = posYo + dy;
 				var oldIdx = dragElemObj.idx;
 				var newIdx = undefined;
 				
-				for (var elemIdx=0; elemIdx<elemYs.length; elemIdx++) {
-					var midPtY = elemYs[elemIdx] + elemHeights[elemIdx]/2;
-					if (elemIdx < oldIdx) {
-						if (curY + relPosY <= midPtY) {
-							var newIdx = elemIdx;
-							break;
+				var frameOffsetTop = $(frameDiv).offset().top;
+				var frameHeight = $(frameDiv).outerHeight();
+				var dragHeight = $(dragElem).outerHeight();
+				var dragMidPt = $(dragElem).offset().top + dragHeight/2;
+				var inFrame = dragMidPt > frameOffsetTop - 5 && dragMidPt < frameOffsetTop + frameHeight + 5;
+				if (inFrame) {
+					for (var elemIdx=0; elemIdx<elemYs.length; elemIdx++) {
+						var midPtY = elemYs[elemIdx] + elemHeights[elemIdx]/2;
+						if (elemIdx < oldIdx) {
+							if (curY <= midPtY) {
+								var newIdx = elemIdx;
+								break;
+							}
+						} else if (elemIdx > oldIdx) {
+							if (curY + elemHeights[oldIdx] >= midPtY) {
+								var newIdx = elemIdx;
+								break;
+							}
 						}
-					} else if (elemIdx > oldIdx) {
-						if (curY + relPosY + elemHeights[oldIdx] >= midPtY) {
-							var newIdx = elemIdx;
-							break;
-						}
-					}
 
-				}
+					}
 				
-				if (newIdx !== undefined) {
-					var movingSection = frameObj.dragElems[oldIdx];
-					frameObj.dragElems.splice(oldIdx, 1);
-					frameObj.dragElems.splice(newIdx, 0, movingSection);
-					frameObj.assignIdxs();
-					frameObj.flyToPositions();
+					if (newIdx !== undefined) {
+						var movingSection = frameObj.dragElems[oldIdx];
+						frameObj.dragElems.splice(oldIdx, 1);
+						frameObj.dragElems.splice(newIdx, 0, movingSection);
+						frameObj.assignIdxs();
+						frameObj.flyToPositions();
+					}
+				} else {
+					var curFrameIdx = self.getFrameIdx(dragElem);
+					if (curFrameIdx !== undefined) {
+						var frame = self.frameObjs[curFrameIdx];
+						var displaceIdx = self.getDisplaceIdx(frame, dragElem);
+						console.log(displaceIdx);
+					}
 				}
-				
 				$(dragElem).css({left: curX, top: curY})
 				
 			}
@@ -107,7 +146,6 @@ Dragger.prototype = {
 	DragElem: function(dragger, elem, id, parentDiv) {
 		this.dragger = dragger;
 		this.elem = elem;
-		this.poso = $(elem).position();
 		this.parentDiv = parentDiv;
 		this.idx = undefined;
 	},
@@ -125,16 +163,18 @@ Dragger.prototype = {
 Dragger.prototype.Frame.prototype = {
 	init: function() {
 		var totalHeight = 0;
+		var poses = [];
 		for (var elemIdx=0; elemIdx<this.dragElems.length; elemIdx++) {
 			var elem = this.dragElems[elemIdx].elem;
 			var pos = $(elem).position();
-			$(elem).css({top: 0, left: 0});
+			poses.push(pos);
 			totalHeight += $(elem).outerHeight();
 		}
 
 		for (var elemIdx=0; elemIdx<this.dragElems.length; elemIdx++) {
 			var elem = this.dragElems[elemIdx].elem;
-			$(elem).css({position: 'relative'});
+			var pos = poses[elemIdx];
+			$(elem).css({position: 'absolute', top: pos.top, left: pos.left});
 		}
 		$(this.elem).css({height: totalHeight});
 		this.makeMasks();
@@ -211,10 +251,9 @@ Dragger.prototype.Frame.prototype = {
 		for (var elemIdx=0; elemIdx<this.dragElems.length; elemIdx++) {
 			var elem = this.dragElems[elemIdx];
 			if (elem != this.dragger.selectedObj) {
-				var relOffset = elem.poso;
 				var pos = $(elem.elem).position();
 				if (pos.top != newOffset.top || pos.left != newOffset.left) {
-					$(elem.elem).animate({top: newOffset.top - relOffset.top, left: newOffset.left - relOffset.left}, this.dragger.animTime, undefined, cb);
+					$(elem.elem).animate({top: newOffset.top, left: newOffset.left}, this.dragger.animTime, undefined, cb);
 				}
 			}
 			newOffset.top += heights[elemIdx];
