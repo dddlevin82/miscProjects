@@ -3,6 +3,7 @@ function Dragger() {
 	this.init();
 	this.selectedObj = undefined;
 	this.animTime = 300;
+	this.displaced = {up: undefined, down: undefined};
 }
 
 Dragger.prototype = {
@@ -30,6 +31,21 @@ Dragger.prototype = {
 				this.assignDrag(frameObj, frameDiv, dragElems[dragElemIdx], dragElems[dragElemIdx].elem);
 			}
 		}
+	},
+	displace: function(div, dir) {
+		var dy;
+		if (dir == 'up') {
+			dy = -20;
+		} else if (dir == 'down') {
+			dy = 20;
+		}
+		var top = Number($(div).attr('baseTop')) + dy;
+
+		$(div).animate({top: top}, this.animTime);
+	},
+	undisplace: function(div) {
+		var baseTop = Number($(div).attr('baseTop'));
+		$(div).animate({top: baseTop}, this.animTime);
 	},
 	getFrameIdx: function(dragDiv) {
 		for (var frameIdx=0; frameIdx<this.frameObjs.length; frameIdx++) {
@@ -116,7 +132,33 @@ Dragger.prototype = {
 					if (curFrameIdx !== undefined) {
 						var frame = self.frameObjs[curFrameIdx];
 						var displaceIdx = self.getDisplaceIdx(frame, dragElem);
-						console.log(displaceIdx);
+						var oldDisplacedUp = self.displaced.up;
+						var oldDisplacedDown = self.displaced.down;
+						//return prev displaced ones first
+						if (frame.dragElems[displaceIdx]) {
+							self.displaced.down = frame.dragElems[displaceIdx].elem;
+						} else {
+							self.displaced.down = undefined;
+						}
+						if (frame.dragElems[displaceIdx - 1]) {
+							self.displaced.up = frame.dragElems[displaceIdx].elem;
+						} else {
+							self.displaced.up = undefined;
+						}
+						
+						if (self.displaced.up != oldDisplacedUp) {
+							if (oldDisplacedUp) self.undisplace(oldDisplacedUp);
+						}
+						if (self.displaced.down != oldDisplacedDown) {
+							if (oldDisplacedDown) self.undisplace(oldDisplacedDown);
+						}
+						if (self.displaced.down != oldDisplacedDown) {
+							self.displace(self.displaced.down, 'down');
+						}
+						if (self.displaced.up != oldDisplacedUp) {
+							self.displace(self.displaced.up, 'up');
+						}
+						
 					}
 				}
 				$(dragElem).css({left: curX, top: curY})
@@ -175,6 +217,7 @@ Dragger.prototype.Frame.prototype = {
 			var elem = this.dragElems[elemIdx].elem;
 			var pos = poses[elemIdx];
 			$(elem).css({position: 'absolute', top: pos.top, left: pos.left});
+			$(elem).attr('baseTop', $(elem).position().top);
 		}
 		$(this.elem).css({height: totalHeight});
 		this.makeMasks();
