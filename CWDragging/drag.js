@@ -180,16 +180,18 @@ Dragger.prototype = {
 				self.selectedObj = undefined;
 				$(document).unbind('mousemove', moveFunc);
 				$(document).unbind('mouseup', upFunc);
-				frameObj.flyToPositions(function() {
-					$(dragElem).css({'z-index': 0})
-				});
-				if (inFrame) {
+				if (inFrame || !curFrame) {
+					frameObj.flyToPositions(function() {
+						$(dragElem).css({'z-index': 0})
+					});
 					self.updateServer(frameObj);
 				} else {
+					$(dragElem).css({'z-index': 0})
 					self.removeFromFrame(frameObj, dragElemObj)
-					curFrame.dragElems.splice(displaceIdx, 0, dragElemObj);
+					curFrame.dragElems.splice(displaceIdx || 0, 0, dragElemObj);
 					self.reassembleHTML();
 					self.init()
+					self.updateServerFolderChange(frameObj, curFrame);
 				}
 			}
 			$(document).mouseup(upFunc);
@@ -248,14 +250,45 @@ Dragger.prototype = {
 		this.parentDiv = parentDiv;
 		this.idx = undefined;
 	},
+	updateServerFolderChange: function(a, b) {
+		//frameObj a and b
+	},
 	updateServer: function(frameObj) {
 		var frameId = $(frameObj.elem).attr('id');
 		var elemIds = [];
 		for (var dragElemIdx=0; dragElemIdx<frameObj.dragElems.length; dragElemIdx++) {
 			var dragElem = frameObj.dragElems[dragElemIdx].elem;
 			elemIds.push($(dragElem).attr('id'));
+			//this.serverSetPos(dragElem.selector, dragElemIdx);
+			//alert('index->' + dragElemIdx + ' id->' + dragElem.selector);
 		}
-		//console.log(frameId + '!' + elemIds.join('.'));
+	},
+	makeHttpObject3: function() {
+		try {return new XMLHttpRequest();}
+		catch (error) {}
+		try {return new ActiveXObject("Msxml2.XMLHTTP");}
+		catch (error) {}
+		try {return new ActiveXObject("Microsoft.XMLHTTP");}
+		catch (error) {}
+
+		throw new Error("Could not create HTTP request object.");
+	},
+	serverSetPos: function(IdString, PosString) {
+		try {
+		
+			//alert("CW.php?goto=manage_sets&popup=1&set_pos=1&conceptest_id=" + IdString + "&position_string=" + PosString);
+		
+			//changed to post and created redundant parameters because weird stuff happens with firefox and chrome...
+			//	somehow popup and set_pos evaluate as true in the get, but the id and position are screwed up...
+			var request = this.makeHttpObject3();
+			request.open('POST', 'CW.php?goto=manage_sets&popup=1&set_pos=1&conceptest_id=' + IdString + '&position_string=' + PosString, false);
+			request.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+			request.send('conceptest_id=' + IdString + '&position_string=' + PosString);
+			
+			//alert('yay ' + request.responseText + ' status->' + request.status);
+		
+		}
+		catch (error) {}
 	}
 }
 
@@ -263,7 +296,7 @@ Dragger.prototype.Frame.prototype = {
 	init: function() {
 		var totalHeight = 0;
 		var heights = [];
-		this.ULOffset = this.getULOffset();
+		this.ULOffset = {top: 0, left: 0};
 		if (this.dragElems.length) {
 			for (var elemIdx=0; elemIdx<this.dragElems.length; elemIdx++) {
 				var elem = this.dragElems[elemIdx].elem;
@@ -282,6 +315,8 @@ Dragger.prototype.Frame.prototype = {
 			this.makeMasks();
 			this.sortElems();
 			this.assignElemIdxs();
+		} else {
+			$(this.elem).css({height: '', width: ''});
 		}
 		this.inited = true;
 	},
@@ -337,13 +372,6 @@ Dragger.prototype.Frame.prototype = {
 	assignIdxs: function() {
 		for (var elemIdx=0; elemIdx<this.dragElems.length; elemIdx++) {
 			this.dragElems[elemIdx].idx = elemIdx;
-		}
-	},
-	getULOffset: function() {
-		if (this.dragElems[0]) {
-			return $(this.dragElems[0].elem).position();
-		} else {
-			return {top: 0, left: 0};
 		}
 	},
 	flyToPositions: function(cb) {
