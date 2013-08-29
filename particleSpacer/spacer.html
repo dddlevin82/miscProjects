@@ -1,0 +1,14 @@
+<html>
+<body>
+<div style='border:2px solid black; display: inline-block;'>
+	<canvas width=500 height=500 id='drawly'>
+	</canvas>
+</div>
+<script src='spacer.js'></script>
+<script>
+	canvas = document.getElementById("drawly");
+	c = canvas.getContext("2d");
+	foo = new Spacer(c, canvas, 1700, 1, 30, 10000);
+</script>
+</body>
+</html>

@@ -4,7 +4,9 @@ var fs = require('fs');
 var url = require('url');
 var thermoSimPath = 'thermoSim/'
 var allSimulations = [
-	new SimulationReference('rev', 'Reversibility', 'danielTest.html', 'wooo')
+	new SimulationReference('rev', 'Reversibility', 'Alec.html', 'The reversibility thing'),
+	new SimulationReference('rev', 'c<sub>V</sub> vs. c<sub>P</sub>', 'Matt2.html', 'The heat capacity thing'),
+	new SimulationReference('rev', 'Work', 'levelTemplateCole.html', 'The work one')
 ]
 
 http.createServer(function(req, res) {
@@ -65,11 +67,13 @@ function getExt(pathname) {
 
 function thermoSimMain(req, res, urlParse, sims) {
 	var str = "";
+	str += "<link type='text/css' href = 'mainStyles.css' rel='stylesheet'/>"
 	str += "<p>Simulations:</p>";
 	for (var simIdx=0; simIdx<sims.length; simIdx++) {
 		var sim = sims[simIdx];
 		str += '<a href = "' + thermoSimPath + 'levels/' + sim.fileName + '">' + sim.title + '</a>: ' + sim.description + '<br>';
 	}
+
 	res.writeHead(200, {'Content-Type': 'text/html'});
 	res.end(str);
 	// db.all("SELECT dir, title, fileName FROM sims", function(error, rows) {
