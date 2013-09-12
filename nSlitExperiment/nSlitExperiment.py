@@ -1,8 +1,21 @@
 import math
+PHYSICALCONSTANTS = {
+	'h': 6.626069e-34,
+	'hBar': 1.05457e-34
+}
 
 
 
 #all methods treat probability amplitudes as immutable
+
+class Point:
+	def __init__(self, x, y):
+		self.x = x
+		self.y = y
+
+class Slit:
+	def __init__(self, pos)
+		self.pos = pos
 
 class ProbabilityAmplitude:
 	def __init__(self, real, imag):
@@ -23,9 +36,28 @@ class ProbabilityAmplitude:
 def PA(real, imag):
 	return ProbabilityAmplitude(real, imag)
 		
-		
-def pathProbAmp(freq, dist):
-	phaseAngle = freq * dist / (2 * math.pi)
+def P(x, y):
+	return Point(x, y)
+	
+def pathProbAmp(waveNumber, dist):
+	hBar = PHYSICALCONSTANTS.hBar
+	momentum = waveNumber * hBar
+	phaseAngle = momentum * dist / hBar
 	real = math.cos(phaseAngle) / dist
 	imag = math.sin(phaseAngle) / dist #feynman lectures, vol 3, chap 3, pg 4
 	return PA(real, imag)
+	
+
+def runExp(slits, emitterPos, emitterFreq, detectorX, detectorY1, detectorY2):
+	#calc freq -> wave number
+	
+	
+	
+#defining run
+
+#I guess 
+
+def init():
+	emitterPos = P(0, 0)
+	slits = [Slit(P(
+	
