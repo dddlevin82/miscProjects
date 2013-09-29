@@ -1,0 +1,14 @@
+<html>
+<body>
+<div style='border:2px solid black; display: inline-block;'>
+	<canvas width=500 height=500 id='drawly'>
+	</canvas>
+</div>
+<script src='bugPath.js'></script>
+<script>
+	canvas = document.getElementById("drawly");
+	c = canvas.getContext("2d");
+	foo = new Bug(c, canvas, 2, .1, .5);
+</script>
+</body>
+</html>

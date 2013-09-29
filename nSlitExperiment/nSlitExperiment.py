@@ -26,7 +26,7 @@ class Point:
 class Slit:
 	def __init__(self, pos):
 		self.pos = pos
-		self.probAmp = None #assuming only one detectors, fixed probAmp
+		self.probAmp = None #assuming only one emitter, fixed probAmp
 
 class ProbabilityAmplitude:
 	def __init__(self, real, imag):
