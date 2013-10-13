@@ -1,0 +1,16 @@
+<html>
+<body>
+<div style='border:2px solid black; display: inline-block;'>
+	<canvas width=200 height=200 id='drawly'>
+	</canvas>
+</div>
+<script src='../indepClasses.js'></script>
+<script src='waves.js'></script>
+<script>
+	canvas = document.getElementById("drawly");
+	c = canvas.getContext("2d");
+	foo = new Waver(canvas, c, [{pos: P(100, 100), mag: 2, freq: .9}]);
+	
+</script>
+</body>
+</html>
