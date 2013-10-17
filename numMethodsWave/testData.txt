@@ -1,0 +1,35 @@
+	double xRange = 10;
+	double tRange = .2;
+	double dx = .002;
+	double dt = .001;
+	double alpha = .01;
+	double waveCenter = .2;
+	double centerHeight = .1;
+	double stdev = .1;
+	
+	Time predictor corrector: 2500 ms
+	Time leapfrog: 1094 ms
+--	
+	double xRange = 10;
+	double tRange = .4;
+	double dx = .002;
+	double dt = .001;
+	double alpha = .01;
+	double waveCenter = .2;
+	double centerHeight = .1;
+	double stdev = .1;
+	
+	Time predictor corrector: 6000 ms
+	Time leapfrog: 2187 ms
+--	
+	double xRange = 10;
+	double tRange = .8;
+	double dx = .002;
+	double dt = .001;
+	double alpha = .01;
+	double waveCenter = .2;
+	double centerHeight = .1;
+	double stdev = .1;
+	
+	Time predictor corrector: 13984 ms
+	Time leapfrog: 4328 ms

@@ -1,11 +1,7 @@
-// waveIterator.cpp : Defines the entry point for the console application.
-//
-
 #include "stdafx.h"
 #include <math.h>
 #include <vector>
 #include <map>
-#include <ctime>
 #include "Windows.h"
 #include "Winbase.h"
  
@@ -43,7 +39,7 @@ vector<double> takeDerivative(vector<double> &ys, double xStep) {
 }
 
 double correctorFunc(double y, double ddy, double alpha) {
-	return alpha * y + ddy; //slideshow said it should be (- ddy), but I think that would make peaks higher and lows closer to zero
+	return alpha * y - ddy; //slideshow said it should be (- ddy), but I think that would make peaks higher and lows closer to zero
 }
 
 vector<double> predictorCorrector(vector<double> ys, double dx, double dt, double tRange, double alpha) {
@@ -52,7 +48,7 @@ vector<double> predictorCorrector(vector<double> ys, double dx, double dt, doubl
 		vector<double> ddYs = takeDerivative(takeDerivative(ys, dx), dx);
 		vector<double> predictions;
 		predictions.reserve(ys.size());
-
+		//could make this faster by allocating preductions once and reusing it.
 		for (int x=0, xx=ys.size(); x<xx; x++) {
 			predictions.push_back(ys[x] + dt * correctorFunc(ys[x], ddYs[x], alpha));
 		}
@@ -90,28 +86,43 @@ void printResults(vector<double> ys, double dx) {
 	}
 }
 
-int _tmain(int argc, _TCHAR* argv[])
-{
+vector<double> prepareWave(double xRange, double dx, double waveCenter, double centerHeight, double stdev) {
 	vector<double> ys;
-	int xRange = 100;
-	double tRange = 100;
-	double dx = .0002;
-	double dt = .0001;
-	double alpha = .9;
-	double waveCenter = .2;
-	double centerHeight = 1;
-	double stdev = .1;
 	ys.reserve(round(xRange/dx));
 	zeroVector(ys, round(xRange/dx));
 	mapOnGaussian(ys, waveCenter, centerHeight, stdev, dx);
+	return ys;
+}
+
+int _tmain(int argc, _TCHAR* argv[])
+{
 	
-	time_t beforePredictor = time(0);
-	DWORD foo = GetTickCount();
-	vector<double> predictorCorrectorResult = predictorCorrector(ys, dx, dt, 2 * dt, alpha);
-	time_t afterPredictor = time(0);
-	printf("Time predictor corrector: %d", afterPredictor - beforePredictor);
-	DWORD goo = GetTickCount();
-	//printResults(predictorCorrectorResult, dx);
+	double xRange = 10;
+	double tRange = .1;
+	double dx = .008;
+	double dt = .001;
+	double alpha = .01;
+	double waveCenter = .2;
+	double centerHeight = .1;
+	double stdev = .1;
+	vector<double> ysPred = prepareWave(xRange, dx, waveCenter, centerHeight, stdev);
+
+	
+	DWORD beforePredictor = GetTickCount();
+	vector<double> predictorCorrectorResult = predictorCorrector(ysPred, dx, dt, tRange, alpha);
+	DWORD afterPredictor = GetTickCount();
+	
+	vector<double> ysLeap = prepareWave(xRange, dx, waveCenter, centerHeight, stdev);
+
+	DWORD beforeLeap = GetTickCount();
+	vector<double> leapFrogResult = leapFrog(ysLeap, dx, dt, tRange, alpha);
+	DWORD afterLeap= GetTickCount();
+
+	
+	printf("Time predictor corrector: %d\n", afterPredictor - beforePredictor);
+	printf("Time leapfrog: %d\n", afterLeap - beforeLeap);
+	
+	printResults(predictorCorrectorResult, dx);
 	
 
 

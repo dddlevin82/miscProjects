@@ -4,8 +4,8 @@ filePath = sys.argv[1]
 
 def getPtData(file):
 	xs = []
-	ys = []
 	for line in file:
+	ys = []
 		commaIdx = line.find(',')
 		xs.append(float(line[0:commaIdx]))
 		ys.append(float(line[commaIdx + 1:len(line)]))
