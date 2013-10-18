@@ -3,7 +3,7 @@ dt = .005;
 #center = 5000;
 amplitude = .05
 foo = "starting"
-xr = dx*[1:10000];#000];
+xr = dx*[1:10];#000];
 center = xr(columns(xr) * .1)
 nts = 100;#000;
 nr = columns(xr);
@@ -43,19 +43,19 @@ for k=2:nr;
 	kc=kc+1; iv(kc)=k; jv(kc)=k-1;
 	sv(kc)=-(1/(dx*dx));
 end
-svm=sparse(iv,jv,sv);
+svm=sparse(iv,jv,sv)
 
 #cfl=dt/dx
 foo = "starting to iterate"
 wot = fod*(yu.');
 #euler
 wok = yu + yu .* yu;
-for k=1:nts
-	i=k
-	yu=yu-dt*svm\ (fod*((yu + yu .* yu).'));
-end
-plot(xr, initWave, '-;init;', xr, yu, '-;final;')
-pause
+#for k=1:nts
+#	i=k
+#	yu=yu-dt*svm\ (fod*((yu + yu .* yu).'));
+#end
+#plot(xr, initWave, '-;init;', xr, yu, '-;final;')
+#pause
 
 #{
 //predictor corrector
