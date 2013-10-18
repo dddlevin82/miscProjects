@@ -1,29 +1,30 @@
 import math
 import copy
 import numpy
+import matplotlib.pyplot as plt
 from scipy.sparse import lil_matrix
 from scipy.sparse.linalg import inv
 
 
-dx = .01;
-dt = .005;
+dx = .1;
+dt = .02;
 #center = 5000;
-amplitude = .05
+amplitude = .5
 print "starting"
 numXs = 1000
 xs = []
 for a in range(numXs):
 	xs.append(a * dx)
 
-center = numXs * .1
+center = numXs * .1 * dx
 
-nts = 10;#000;
+nts = 300;#000;
 
 	
-scalingCoef = numXs / 10000;
+
 yu = []
 for x in xs:
-	yu.append(1.5 * amplitude * (1 / math.cosh(.5 * (scalingCoef * .05 * (x-center)) * math.sqrt(amplitude / (amplitude + 1)))**2));
+	yu.append(1.5 * amplitude * (1 / math.cosh(.5 * (x-center) * math.sqrt(amplitude / (amplitude + 1))))**2);
 
 initWave = copy.copy(yu);
 yuMtx = numpy.matrix(yu).getT()
@@ -61,7 +62,7 @@ for k in range(1, numXs):
 	svm[k, k - 1] = -1 / (dx * dx)
 
 fod = fod.tocsr()
-svm = svm.tocsr()
+svm = svm.tocsc()
 
 for t in range(nts):
 	
@@ -73,11 +74,14 @@ for t in range(nts):
 	# print yuMtx.getT().tolist()
 	# print 'next'
 	#print dt * inv(svm) * (fod * (yuMtx + yuMtxSqr))
-	print yuMtx
-	print 'a'
+	# print yuMtx
+	print t
 	yuMtx = yuMtx - dt * inv(svm) * (fod * (yuMtx + numpy.matrix(yuMtxSqr).getT()))
-	print yuMtx
-print a
+	# print yuMtx
+
+plt.plot(xs, yuMtx.getT().tolist()[0], 'r--', xs, yu, 'bs')
+plt.ylabel('height')
+plt.show()
 #for t in range(nts):
 	
 # for k=1:nr;
