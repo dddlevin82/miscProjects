@@ -6,82 +6,94 @@ from scipy.sparse import lil_matrix
 from scipy.sparse.linalg import inv
 
 
-dx = .1;
-dt = .02;
-#center = 5000;
-amplitude = .5
-print "starting"
-numXs = 1000
-xs = []
-for a in range(numXs):
-	xs.append(a * dx)
+#dx = .1
+#dt = .02
 
-center = numXs * .1 * dx
-
-nts = 300;#000;
-
+def calcWaveAtTime(xs, amp, center, t):
+	yu = []
+	for x in xs:
+		yu.append(1.5 * amp * (1 / math.cosh(.5 * (x - center - t * (1 + amp)) * math.sqrt(amp / (amp + 1))))**2)
+	return yu
 	
-
-yu = []
-for x in xs:
-	yu.append(1.5 * amplitude * (1 / math.cosh(.5 * (x-center) * math.sqrt(amplitude / (amplitude + 1))))**2);
-
-initWave = copy.copy(yu);
-yuMtx = numpy.matrix(yu).getT()
-#print yuMtx
-#plot (xr, yu, '-;thingy;', xr, .1*sin(xr), '-;otherthings;')
-
-#populate with bbm
-alpha = 1
-#pause
-
-tdx = 2 * dx;
-kc = 0;
-fod = lil_matrix((numXs, numXs));
-for k in range(0, numXs - 1):
-	fod[k, k+1] =  1 / tdx
-	fod[k+1, k] =  -1 / tdx
+def sqrVals(mtx):
+	mtx = mtx.copy()
+	for a in mtx:
+		a*=a
+	return mtx
 	
-#A=A.tocsr()
-#for k=2:nr;
-	# kc=kc+1; hiv(kc)=k; hjv(kc)=k-1; hsv(kc)=-(1/tdx);
-# end
-# for k=1:nr-1;
-	# kc=kc+1; hiv(kc)=k; hjv(kc)=k+1; hsv(kc)=+(1/tdx);
-# end
-# fod=sparse(hiv,hjv,hsv);
+def iterateEuler(nts, yuMtx, dt, svm, fod):
+	for t in range(nts):
+		print t
+		yuMtx = yuMtx - dt * inv(svm) * (fod * (yuMtx + sqrVals(yuMtxSqr)))	
+	return yuMtx
 
-svm = lil_matrix((numXs, numXs))
+def iteratePredCor(nts, yuMtx, dt, svm, fod):
+	for t in range(nts):
+		yuMtxSqr = yuMtx.copy();
+		for a 
 
-kc=0;
+def runWave(dx, length, dt, numTimeSteps, type):
+	amplitude = 1.
+	print "starting"
+	numXs = round(length / dx)
+	xs = []
+	for a in range(numXs):
+		xs.append(a * dx)
 
-for k in range(numXs):
-	svm[k, k] = alpha + 2 / (dx * dx)
-for k in range(1, numXs):
-	svm[k - 1, k] = -1 / (dx * dx)
-	svm[k, k - 1] = -1 / (dx * dx)
+	center = numXs * .2 * dx#meh
 
-fod = fod.tocsr()
-svm = svm.tocsc()
+	nts = numTimeSteps;#50  #000;
 
-for t in range(nts):
+		
+
+	yu = calcWaveAtTime(xs, amplitude, center, 0)
+
+	initWave = copy.copy(yu);
+	yuMtx = numpy.matrix(yu).getT()
+	plt.plot(xs, yu, 'r--')
+	plt.ylabel('height')
+	plt.show()
+	alpha = 1
+	#pause
+
+	tdx = 2 * dx;
+	kc = 0;
+	fod = lil_matrix((numXs, numXs));
+	for k in range(0, numXs - 1):
+		fod[k, k+1] =  1 / tdx
+		fod[k+1, k] =  -1 / tdx
+		
+
+	svm = lil_matrix((numXs, numXs))
+
+	kc=0;
+
+	for k in range(numXs):
+		svm[k, k] = alpha + 2 / (dx * dx)
+	for k in range(1, numXs):
+		svm[k - 1, k] = -1 / (dx * dx)
+		svm[k, k - 1] = -1 / (dx * dx)
+
+	fod = fod.tocsr()
+	svm = svm.tocsc()
 	
-	yuMtxSqr = yuMtx.copy().getT().tolist()[0]
+	if (type == 'euler'):
+		yuMtx = iterateEuler(nts, yuMtx, dt, svm, fod)
+	for t in range(nts):
+		
+		yuMtxSqr = yuMtx.copy()
+		for a in yuMtxSqr:
+			a*=a
+		print t
+		yuMtx = yuMtx - dt * inv(svm) * (fod * (yuMtx + yuMtxSqr))
 	
-	for i in range(len(yuMtxSqr)):
-		yuMtxSqr[i] *= yuMtxSqr[i]
-	# print yuMtxSqr
-	# print yuMtx.getT().tolist()
-	# print 'next'
-	#print dt * inv(svm) * (fod * (yuMtx + yuMtxSqr))
-	# print yuMtx
-	print t
-	yuMtx = yuMtx - dt * inv(svm) * (fod * (yuMtx + numpy.matrix(yuMtxSqr).getT()))
-	# print yuMtx
-
-plt.plot(xs, yuMtx.getT().tolist()[0], 'r--', xs, yu, 'bs')
-plt.ylabel('height')
-plt.show()
+	yuActual = calcWaveAtTime(xs, amplitude, center, dt * nts)
+	
+	plt.plot(xs, yuMtx.getT().tolist()[0], 'r--', xs, yuActual, 'bs')
+	plt.ylabel('height')
+	plt.show()
+	
+runWave(.1, 100, .02, 1., 'lala')
 #for t in range(nts):
 	
 # for k=1:nr;
