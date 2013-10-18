@@ -2,6 +2,7 @@ import math
 import copy
 import numpy
 import matplotlib.pyplot as plt
+from time import time
 from scipy.sparse import lil_matrix
 from scipy.sparse.linalg import inv
 
@@ -21,26 +22,61 @@ def sqrVals(mtx):
 		a*=a
 	return mtx
 	
+def eulerStep(dt, svm, fod, yuMtx):
+	return -dt * inv(svm) * (fod * (yuMtx + sqrVals(yuMtx)))
+	
 def iterateEuler(nts, yuMtx, dt, svm, fod):
 	for t in range(nts):
 		print t
-		yuMtx = yuMtx - dt * inv(svm) * (fod * (yuMtx + sqrVals(yuMtxSqr)))	
+		yuMtx = yuMtx + eulerStep(dt, svm, fod, yuMtx)#- dt * inv(svm) * (fod * (yuMtx + sqrVals(yuMtx)))	
 	return yuMtx
 
 def iteratePredCor(nts, yuMtx, dt, svm, fod):
 	for t in range(nts):
-		yuMtxSqr = yuMtx.copy();
-		for a 
+		print t
+		prediction = yuMtx + eulerStep(dt, svm, fod, yuMtx)
+		yuMtx = .5 * (prediction + yuMtx + eulerStep(dt, svm, fod, prediction))
+	return yuMtx
+	
+def iterateLeapFrog(nts, yuMtx, dt, svm, fod):
+	yuLast = yuMtx.copy()
+	yuMtx = iteratePredCor(1, yuMtx, dt, svm, fod)
+	nts-=1
+	for t in range(nts):
+		print t + 1
+		store = yuMtx.copy()
+		yuMtx = yuLast + 2 * eulerStep(dt, svm, fod, yuMtx)
+		yuLast = store
+	return yuMtx
 
+def findMaxIdx(xs, printme):
+	maxIdx = 0
+	for i in range(len(xs)):
+		if (xs[i] > xs[maxIdx]):
+			maxIdx = i
+	return maxIdx
+
+def avg(x, y):
+	return .5 * (x + y)
+	
+def calcError(a, b):
+	
+	maxA = findMaxIdx(a, 'a')
+	maxB = findMaxIdx(b, 'b')
+	print maxA
+	print maxB
+	return abs(.5 * ((a[maxA] - b[maxA]) / avg(a[maxA], b[maxA]) + (a[maxB] - b[maxB]) / avg(a[maxB], b[maxB])))
+	
 def runWave(dx, length, dt, numTimeSteps, type):
 	amplitude = 1.
 	print "starting"
-	numXs = round(length / dx)
+	numXs = int(length / dx)
+	print numXs
 	xs = []
 	for a in range(numXs):
 		xs.append(a * dx)
 
-	center = numXs * .2 * dx#meh
+	center = length * .2
 
 	nts = numTimeSteps;#50  #000;
 
@@ -50,11 +86,10 @@ def runWave(dx, length, dt, numTimeSteps, type):
 
 	initWave = copy.copy(yu);
 	yuMtx = numpy.matrix(yu).getT()
-	plt.plot(xs, yu, 'r--')
-	plt.ylabel('height')
-	plt.show()
+	# plt.plot(xs, yu, 'r--')
+	# plt.ylabel('height')
+	# plt.show()
 	alpha = 1
-	#pause
 
 	tdx = 2 * dx;
 	kc = 0;
@@ -76,24 +111,29 @@ def runWave(dx, length, dt, numTimeSteps, type):
 
 	fod = fod.tocsr()
 	svm = svm.tocsc()
-	
+	timeInit = time()
 	if (type == 'euler'):
 		yuMtx = iterateEuler(nts, yuMtx, dt, svm, fod)
-	for t in range(nts):
-		
-		yuMtxSqr = yuMtx.copy()
-		for a in yuMtxSqr:
-			a*=a
-		print t
-		yuMtx = yuMtx - dt * inv(svm) * (fod * (yuMtx + yuMtxSqr))
+	elif (type == 'predCor'):
+		yuMtx = iteratePredCor(nts, yuMtx, dt, svm, fod)
+	elif (type == 'leapFrog'):
+		yuMtx = iterateLeapFrog(nts, yuMtx, dt, svm, fod)
 	
 	yuActual = calcWaveAtTime(xs, amplitude, center, dt * nts)
 	
-	plt.plot(xs, yuMtx.getT().tolist()[0], 'r--', xs, yuActual, 'bs')
-	plt.ylabel('height')
-	plt.show()
+	fracError = calcError(yuActual, yuMtx.getT().tolist()[0])
 	
-runWave(.1, 100, .02, 1., 'lala')
+	predicted, = plt.plot(xs, yuMtx.getT().tolist()[0], 'r--')
+	actual, = plt.plot(xs, yuActual, 'b:')
+	plt.legend([actual, predicted], ["actual", "prediced"])
+	plt.title(type + " with dx = " + str(dx) + ", dt = " + str(dt) + " for " + str(nts) + " steps, frac error = " + str(round(fracError, 3)) + " time = " + str(round(time() - timeInit)))
+	plt.ylabel('height')
+	plt.xlabel('x')
+	plt.show()
+
+
+runWave(.1, 100, .02, 30, 'euler')
+
 #for t in range(nts):
 	
 # for k=1:nr;
