@@ -33,7 +33,6 @@ def iterateEuler(nts, yuMtx, dt, invSvm, fod):
 
 def iteratePredCor(nts, yuMtx, dt, invSvm, fod):
 	for t in range(nts):
-		#print t
 		prediction = yuMtx + eulerStep(dt, invSvm, fod, yuMtx)
 		yuMtx = .5 * (prediction + yuMtx + eulerStep(dt, invSvm, fod, prediction))
 	return yuMtx
@@ -43,7 +42,6 @@ def iterateLeapFrog(nts, yuMtx, dt, invSvm, fod):
 	yuMtx = iteratePredCor(1, yuMtx, dt, invSvm, fod)
 	nts-=1
 	for t in range(nts):
-		#print t + 1
 		store = yuMtx.copy()
 		yuMtx = yuLast + 2 * eulerStep(dt, invSvm, fod, yuMtx)
 		yuLast = store

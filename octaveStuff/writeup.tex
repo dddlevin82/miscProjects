@@ -1,0 +1,83 @@
+
+\documentclass[a4paper,12pt]{article}
+\usepackage{fullpage}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{color}
+\usepackage{caption}
+\usepackage{tabularx}
+\usepackage{subcaption}
+%\usepackage{subfigure}
+\usepackage{subcaption}
+%\restylefloat{table}
+%\floatstyle{boxed}
+\captionsetup{font={footnotesize}, labelfont={footnotesize}}
+
+
+\begin{document}
+
+
+
+\section{Background} 
+	\paragraph*{}
+		The purpose of this assignment is to compare the leapfrog and predictor-corrector schemes in modeling a low amplitude wave using the Benjamin-Bona-Mahony (BBM) partial differential equation and to describe the model's accuracy and computation time with respect to time and position step size.  The BBM equation is shown in equation \ref{eq:BBMDiff}.
+			\begin{equation}
+				\label{eq:BBMDiff}
+				u_{t} + u{x} + uu_{x} - u_{xxt} = 0
+			\end{equation}
+		The time derivative can be isolated as shown in Equation \ref{eq:BBMSolvedUt}.
+			\begin{equation}
+				\label{eq:BBMSolvedUt}
+				u_{t}=-(1-\frac{d^{2}}{dx^{2}})^{-1}\frac{d}{dx}(u+u^{2}) = B(u+u^{2})
+			\end{equation}
+		Equation \ref{eq:BBMSolvedUt} can be iterated by separately describing matrices for $\frac{d}{dx}(u+u^2)$ and $(1-\frac{d^{2}}{dx^{2}})^{-1}$.  
+		\paragraph*{} The center differencing scheme is used to take the derivative of $u+u^{2}$.  The necessary matrix populates $\frac{1}{2dx}$ on the upper diagonal and $\frac{-1}{2dx}$ on the lower diagonal.  
+
+			  The result of the matrix operating on $u+u^{2}$ is shown in Equation \ref{eq:derivative}.
+			\begin{equation}
+				\label{eq:derivative}
+				\frac{d(u+u^{2})}{dx} = \frac{(u+u^{2})_{i+1} - (u+u^{2})_{i-1}}{2dx}
+			\end{equation}
+
+		The matrix describing $1-\frac{d^{2}}{dx^{2}}$ populates the upper and lower diagonals with $\frac{-1}{dx^{2}}$, and the main diagonal with $1 + \frac{2}{dx^{2}}$.
+	\paragraph*{}
+		The iterating loop for the predictor corrector methods is shown below,
+		\begin{verbatim}
+			def iteratePredCor(nts, yuMtx, dt, invSvm, fod):
+				   for t in range(nts):
+			       prediction = yuMtx + eulerStep(dt, invSvm, fod, yuMtx)
+				      	yuMtx = .5 * (prediction + yuMtx + eulerStep(dt, invSvm, fod, prediction))
+			return yuMtx
+		\end{verbatim}
+		where eulerStep is defined as 
+		\begin{verbatim}
+		def eulerStep(dt, invSvm, fod, yuMtx):
+	   		return -dt * (invSvm * (fod * (yuMtx + sqrVals(yuMtx))))
+
+		\end{verbatim}
+		The iterating loop for the leapfrog method is shown below.
+		\begin{verbatim}
+		def iterateLeapFrog(nts, yuMtx, dt, invSvm, fod):
+		   	yuLast = yuMtx.copy()
+		   	yuMtx = iteratePredCor(1, yuMtx, dt, invSvm, fod)
+		   	nts-=1
+		   	for t in range(nts):
+		      		store = yuMtx.copy()
+			      	yuMtx = yuLast + 2 * eulerStep(dt, invSvm, fod, yuMtx)
+			      	yuLast = store
+			return yuMtx
+		\end{verbatim}
+		The leapfrog method must store a copy of the last step, making copying necessary. 
+	\paragraph*{} 
+		The BBM equation can be integrated into equation \ref{eq:BBMSolved}
+		\begin{equation}
+			\label{eq:BBMSolved}
+			u(x, t) = \frac{3}{2}asech^{2}(\frac{1}{2}\sqrt{\frac{a}{a+1}}(x-(1+a)t))
+		\end{equation}
+		where $a$ is the amplitude of the wave.  This will be used to compare the results of the iterations.
+
+\section{Tests and results}
+	
+
+\end{document}
