@@ -78,6 +78,38 @@
 		where $a$ is the amplitude of the wave.  This will be used to compare the results of the iterations.
 
 \section{Tests and results}
-	
+	The results are shown in 
+	\begin{center}
+		\begin{tabular}{l | c | c | c | c | c}
+			 & Relative max error & dx & dt & nts & seconds\\
+			 \hline
+			 Pred/cor & \begin{tabular}{c}1.93E-3\\6.40E-5\\3.40E-4\end{tabular} &
+			  \begin{tabular}{c}0.2\\0.1\\0.05\end{tabular} & 
+			  \begin{tabular}{c} 0.04\\0.04\\0.04\end{tabular} & 
+			  \begin{tabular}{c} 600\\600\\600\end{tabular}  &
+			  \begin{tabular}{c} 9\\19\\41\end{tabular} \\
+			  \hline
+			Pred/cor & 
+			\begin{tabular}{c}6.40E-5\\4.70E-4\\5.60E-4\end{tabular} &
+			  \begin{tabular}{c}0.1\\0.1\\0.1\end{tabular} & 
+			  \begin{tabular}{c} 0.04\\0.02\\0.01\end{tabular} & 
+			  \begin{tabular}{c} 600\\1200\\2400\end{tabular}  &
+			  \begin{tabular}{c} 19\\38\\76\end{tabular} \\
+			  \hline
+			 Leapfrog & \begin{tabular}{c}2.01-3\\8.60-5\\3.36-4\end{tabular} &
+			  \begin{tabular}{c}0.2\\0.1\\0.05\end{tabular} & 
+			  \begin{tabular}{c} 0.04\\0.04\\0.04\end{tabular} & 
+			  \begin{tabular}{c} 600\\600\\600\end{tabular}  &
+			  \begin{tabular}{c} 5\\9\\21\end{tabular} \\
+			  \hline
+			Leapfrog & 
+			\begin{tabular}{c}8.60E-5\\4.61E-4\\5.56E-4\end{tabular} &
+			  \begin{tabular}{c}0.1\\0.1\\0.1\end{tabular} & 
+			  \begin{tabular}{c} 0.04\\0.02\\0.01\end{tabular} & 
+			  \begin{tabular}{c} 600\\1200\\2400\end{tabular}  &
+			  \begin{tabular}{c} 9\\19\\38\end{tabular} \\
+			  \hline
+		\end{tabular}
+	\end{center}
 
 \end{document}
