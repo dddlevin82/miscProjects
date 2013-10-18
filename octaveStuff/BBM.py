@@ -1,14 +1,14 @@
+import sys
 import math
 import copy
 import numpy
+import pylab
 import matplotlib.pyplot as plt
 from time import time
 from scipy.sparse import lil_matrix
 from scipy.sparse.linalg import inv
 
-
-#dx = .1
-#dt = .02
+plotIdx = 0
 
 def calcWaveAtTime(xs, amp, center, t):
 	yu = []
@@ -22,30 +22,30 @@ def sqrVals(mtx):
 		a*=a
 	return mtx
 	
-def eulerStep(dt, svm, fod, yuMtx):
-	return -dt * inv(svm) * (fod * (yuMtx + sqrVals(yuMtx)))
+def eulerStep(dt, invSvm, fod, yuMtx):
+	return -dt * (invSvm * (fod * (yuMtx + sqrVals(yuMtx))))
 	
-def iterateEuler(nts, yuMtx, dt, svm, fod):
+def iterateEuler(nts, yuMtx, dt, invSvm, fod):
 	for t in range(nts):
-		print t
-		yuMtx = yuMtx + eulerStep(dt, svm, fod, yuMtx)#- dt * inv(svm) * (fod * (yuMtx + sqrVals(yuMtx)))	
+		#print t
+		yuMtx = yuMtx + eulerStep(dt, invSvm, fod, yuMtx)
 	return yuMtx
 
-def iteratePredCor(nts, yuMtx, dt, svm, fod):
+def iteratePredCor(nts, yuMtx, dt, invSvm, fod):
 	for t in range(nts):
-		print t
-		prediction = yuMtx + eulerStep(dt, svm, fod, yuMtx)
-		yuMtx = .5 * (prediction + yuMtx + eulerStep(dt, svm, fod, prediction))
+		#print t
+		prediction = yuMtx + eulerStep(dt, invSvm, fod, yuMtx)
+		yuMtx = .5 * (prediction + yuMtx + eulerStep(dt, invSvm, fod, prediction))
 	return yuMtx
 	
-def iterateLeapFrog(nts, yuMtx, dt, svm, fod):
+def iterateLeapFrog(nts, yuMtx, dt, invSvm, fod):
 	yuLast = yuMtx.copy()
-	yuMtx = iteratePredCor(1, yuMtx, dt, svm, fod)
+	yuMtx = iteratePredCor(1, yuMtx, dt, invSvm, fod)
 	nts-=1
 	for t in range(nts):
-		print t + 1
+		#print t + 1
 		store = yuMtx.copy()
-		yuMtx = yuLast + 2 * eulerStep(dt, svm, fod, yuMtx)
+		yuMtx = yuLast + 2 * eulerStep(dt, invSvm, fod, yuMtx)
 		yuLast = store
 	return yuMtx
 
@@ -68,6 +68,7 @@ def calcError(a, b):
 	return abs(.5 * ((a[maxA] - b[maxA]) / avg(a[maxA], b[maxA]) + (a[maxB] - b[maxB]) / avg(a[maxB], b[maxB])))
 	
 def runWave(dx, length, dt, numTimeSteps, type):
+	global plotIdx
 	amplitude = 1.
 	print "starting"
 	numXs = int(length / dx)
@@ -78,17 +79,12 @@ def runWave(dx, length, dt, numTimeSteps, type):
 
 	center = length * .2
 
-	nts = numTimeSteps;#50  #000;
-
-		
+	nts = numTimeSteps;
 
 	yu = calcWaveAtTime(xs, amplitude, center, 0)
 
 	initWave = copy.copy(yu);
 	yuMtx = numpy.matrix(yu).getT()
-	# plt.plot(xs, yu, 'r--')
-	# plt.ylabel('height')
-	# plt.show()
 	alpha = 1
 
 	tdx = 2 * dx;
@@ -111,13 +107,16 @@ def runWave(dx, length, dt, numTimeSteps, type):
 
 	fod = fod.tocsr()
 	svm = svm.tocsc()
+	invSvm = inv(svm)
+	print 'Done inverting'
 	timeInit = time()
+	
 	if (type == 'euler'):
-		yuMtx = iterateEuler(nts, yuMtx, dt, svm, fod)
+		yuMtx = iterateEuler(nts, yuMtx, dt, invSvm, fod)
 	elif (type == 'predCor'):
-		yuMtx = iteratePredCor(nts, yuMtx, dt, svm, fod)
+		yuMtx = iteratePredCor(nts, yuMtx, dt, invSvm, fod)
 	elif (type == 'leapFrog'):
-		yuMtx = iterateLeapFrog(nts, yuMtx, dt, svm, fod)
+		yuMtx = iterateLeapFrog(nts, yuMtx, dt, invSvm, fod)
 	
 	yuActual = calcWaveAtTime(xs, amplitude, center, dt * nts)
 	
@@ -125,60 +124,29 @@ def runWave(dx, length, dt, numTimeSteps, type):
 	
 	predicted, = plt.plot(xs, yuMtx.getT().tolist()[0], 'r--')
 	actual, = plt.plot(xs, yuActual, 'b:')
-	plt.legend([actual, predicted], ["actual", "prediced"])
-	plt.title(type + " with dx = " + str(dx) + ", dt = " + str(dt) + " for " + str(nts) + " steps, frac error = " + str(round(fracError, 3)) + " time = " + str(round(time() - timeInit)))
+	plt.legend([actual, predicted], ["exact", "iterated"])
+	plt.title(type + " with dx = " + str(dx) + ", dt = " + str(dt) + " for " + str(nts) + " steps,\n frac error = " + str(round(fracError, 6)) + ", time = " + str(round(time() - timeInit)) + ' sec')
 	plt.ylabel('height')
 	plt.xlabel('x')
-	plt.show()
+	pylab.savefig(sys.argv[1] + str(plotIdx) + '.png', bbox_inches=0)
+	plotIdx+=1
 
 
-runWave(.1, 100, .02, 30, 'euler')
 
-#for t in range(nts):
-	
-# for k=1:nr;
-	# kc=kc+1; iv(kc)=k; jv(kc)=k;
-	# sv(kc)=alfa+(2/(dx*dx));
-# end
-# for k=2:nr;
-	# kc=kc+1; iv(kc)=k-1; jv(kc)=k;
-	# sv(kc)=-(1/(dx*dx));
-# end
+runWave(.2, 100, .04, 600, 'predCor')
+runWave(.1, 100, .04, 600, 'predCor')
+runWave(.05, 100, .04, 600, 'predCor')
 
-# for k=2:nr;
-	# kc=kc+1; iv(kc)=k; jv(kc)=k-1;
-	# sv(kc)=-(1/(dx*dx));
-# end
-# svm=sparse(iv,jv,sv);
+runWave(.1, 100, .04, 600, 'predCor')
+runWave(.1, 100, .02, 1200, 'predCor')
+runWave(.1, 100, .01, 2400, 'predCor')
 
-# #cfl=dt/dx
-# foo = "starting to iterate"
-# wot = fod*(yu.');
-# #euler
-# wok = yu + yu .* yu;
-# for k=1:nts
-	# i=k
-	# yu=yu-dt*svm\ (fod*((yu + yu .* yu).'));
-# end
-# plot(xr, initWave, '-;init;', xr, yu, '-;final;')
-# pause
+runWave(.2, 100, .04, 600, 'leapFrog')
+runWave(.1, 100, .04, 600, 'leapFrog')
+runWave(.05, 100, .04, 600, 'leapFrog')
 
-# #{
-# //predictor corrector
-# for k=1:nts
-	# yuPred = yu - cfl*svm\ (fod(yu + yu .* yu));
-	# yu = .5 * (yuPred + yu - dt * cfl * svm\ (fod(yuPred + yuPred .* yuPred)));
-# end
+runWave(.1, 100, .04, 600, 'leapFrog')
+runWave(.1, 100, .02, 1200, 'leapFrog')
+runWave(.1, 100, .01, 2400, 'leapFrog')
 
-# //leapfrog
-# //yuLast = yu;
-# //yuPred = yu - cfl*svm\ (fod(yu + yu .* yu))
-# //yu = .5 * (yuPred + yu - dt * cfl * svm\ (fod(yuPred + yuPred .* yuPred)))
-
-# /for k=1:nts
-# //	yuTemp = yu;
-# //	yu = yuLast - 2 * cfl * svm\ (fod(yu + yu .* yu));
-# //	yuLast = yuTemp;
-# //end
-# #}
 
