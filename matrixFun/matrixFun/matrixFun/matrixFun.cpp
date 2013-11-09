@@ -16,7 +16,43 @@ public:
 	void appendCol(Matrix col);
 	Matrix sliceCol(int col);
 	Matrix sliceRow(int row);
+	
+	Matrix sliceBlock(int row, int col, int numRows, int numCols);
+	vector<Matrix> asRowBlocks(int numBlocks);
+	Matrix operator + (Matrix &m);
+	Matrix operator - (Matrix &m);
+	Matrix operator * (Matrix &m);
 };
+
+Matrix Matrix::operator+ (Matrix &m) {
+	Matrix res = Matrix(rows.size(), rows[0].size());
+	for (int y=0; y<rows.size(); y++) {
+		for (int x=0; x<rows[0].size();  x++) {
+			res.rows[y][x] = rows[y][x] + m.rows[y][x];
+		}
+	}
+	return res;
+}
+
+Matrix Matrix::operator- (Matrix &m) {
+	Matrix res = Matrix(rows.size(), rows[0].size());
+	for (int y=0; y<rows.size(); y++) {
+		for (int x=0; x<rows[0].size();  x++) {
+			res.rows[y][x] = rows[y][x] - m.rows[y][x];
+		}
+	}
+	return res;
+}
+
+Matrix Matrix::operator* (Matrix &m) {
+	Matrix res = Matrix(rows.size(), rows[0].size());
+	for (int y=0; y<rows.size(); y++) {
+		for (int x=0; x<rows[0].size();  x++) {
+			res.rows[y][x] = rows[y][x] - m.rows[y][x];
+		}
+	}
+	return res;
+}
 
 Matrix::Matrix(int nRow, int nCol) {
 	
@@ -45,6 +81,15 @@ Matrix Matrix::sliceRow(int nRow) {
 	return destRow;
 }
 
+Matrix Matrix::sliceBlock(int row, int col, int nRows, int nCols) {
+	Matrix block = Matrix(nRows, nCols);
+	for (int y=0; y<nRows; y++) {
+		for (int x=0; x<nCols; x++) {
+			block.rows[y][x] = rows[row + y][col + x];
+		}
+	}
+	return block;
+}
 
 void Matrix::populateRow(int nRow, double val) {
 	for (int x=0; x<rows[0].size(); x++) {
@@ -52,7 +97,7 @@ void Matrix::populateRow(int nRow, double val) {
 	}
 }
 
-void Matrix::appendCol(Matrix col) {
+void Matrix::appendCol(Matrix &col) {
 	for (int y=0; y<rows.size(); y++) {
 		rows[y].push_back(col.rows[y][0]);
 	}
@@ -74,7 +119,7 @@ void Matrix::populateDiagonal(int row, int col, double val) {
 	}
 }
 
-Matrix forwardSubCol(Matrix coefs, Matrix eqls) {
+Matrix forwardSubCol(Matrix &coefs, Matrix &eqls) {
 	Matrix xs = Matrix(eqls.rows.size(), 1);
 	for (int y=0; y<coefs.rows.size(); y++) {
 		double sum = 0;
@@ -88,7 +133,7 @@ Matrix forwardSubCol(Matrix coefs, Matrix eqls) {
 }
 
 
-Matrix forwardSub(Matrix coefs, Matrix eqls) {
+Matrix forwardSub(Matrix &coefs, Matrix &eqls) {
 	Matrix xs = Matrix(coefs.rows.size(), 0);
 	for (int x=0; x<eqls.rows[0].size(); x++) {
 		Matrix eqlsCol = eqls.sliceCol(x);
@@ -99,20 +144,74 @@ Matrix forwardSub(Matrix coefs, Matrix eqls) {
 
 }
 
+vector<Matrix> Matrix::asRowBlocks(int blockSize) {
+	vector<Matrix> blocks;
+	for (int i=0; i< (int)rows.size() / blockSize; i++) {
+		Matrix cpRows = Matrix(blockSize, rows[0].size());
+		for (int j=0; j<blockSize; j++) {
+			cpRows.rows[j] = rows[i * blockSize + j];
+		}
+		blocks.push_back(cpRows);
+	}
+	return blocks;
 
+}
 
+vector<Matrix> sliceLs(Matrix coefs, int blockSize) {
+	vector<Matrix> ls;
+	for (int i=0; i<(int)coefs.rows.size() / blockSize; i++) {
+		ls.push_back(coefs.sliceBlock(i * blockSize, i * blockSize, blockSize, blockSize));
+	}
+	return ls;
+}
+
+vector<Matrix> sliceRs(Matrix coefs, int blockSize) {
+	vector<Matrix> rs;
+	for (int i=1; i<(int)coefs.rows.size() / blockSize; i++) {
+		rs.push_back(coefs.sliceBlock(i * blockSize, (i - 1) * blockSize, blockSize, blockSize));
+	}
+	return rs;
+}
+
+vector<Matrix> calcGs(vector<Matrix> &rs, vector<Matrix> &ls) {
+	vector<Matrix> gs;
+	for (int i=0; i<rs.size(); i++) {
+		gs.push_back(forwardSub(ls[i+1], rs[1]));
+	}
+	return gs;
+
+}
+
+vector<Matrix> calcBis(vector<Matrix> &ls, vector<Matrix> &ansBlocks) {
+	vector<Matrix> bis;
+	for (int i=0; i<ls.size(); i++) {
+		bis.push_back(forwardSub(ls[i], ansBlocks[i]));
+	}
+	return bis;
+}
+
+//vector<Matrix> solveXBlocks(vector<Matrix> ls, vector<Matrix> bis, vector<Matrix> ans, vector<Matrix> gs) {
+	
+//}
 
 int _tmain(int argc, _TCHAR* argv[])
 {
 	int numProc = 4;
 	int blockSize = 5;
-	int mtxSize = 2;//numProc * blockSize;
+	int mtxSize = numProc * blockSize;
 	Matrix coefs = Matrix(mtxSize, mtxSize);
 	coefs.populateDiagonal(0, 0, 1);
 	coefs.populateDiagonal(1, 0, -1);
-	Matrix ans = Matrix(2, 2);
-	ans.populateDiagonal(0, 1, -1);
-	Matrix xs = forwardSub(coefs, ans);
+	coefs.populateDiagonal(2, 0, -2);
+	vector<Matrix> rs = sliceRs(coefs, blockSize);
+	vector<Matrix> ls = sliceLs(coefs, blockSize);
+	vector<Matrix> gs = calcGs(rs, ls);
+	
+	Matrix ans = Matrix(mtxSize, 1);
+	ans.populateCol(0, 1);
+	vector<Matrix> ansBlocks = ans.asRowBlocks(blockSize);
+	vector<Matrix> bis = calcBis(ls, ansBlocks);
+	//vector<Matrix> xBlocks = solveXBlocks(ls, bis, ansBlocks, gs);
 	return 0;
 }
 
