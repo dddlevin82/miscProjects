@@ -13,7 +13,7 @@ public:
 	void populateDiagonal(int row, int col, double val); 
 	void populateRow(int row, double val);
 	void populateCol(int col, double val);
-	void appendCol(Matrix col);
+	void appendCol(Matrix &col);
 	Matrix sliceCol(int col);
 	Matrix sliceRow(int row);
 	
@@ -45,13 +45,19 @@ Matrix Matrix::operator- (Matrix &m) {
 }
 
 Matrix Matrix::operator* (Matrix &m) {
-	Matrix res = Matrix(rows.size(), rows[0].size());
-	for (int y=0; y<rows.size(); y++) {
-		for (int x=0; x<rows[0].size();  x++) {
-			res.rows[y][x] = rows[y][x] - m.rows[y][x];
+	Matrix res = Matrix(rows.size(), m.rows[0].size());
+
+	for (int y=0; y<res.rows.size(); y++) {
+		for (int x=0; x<res.rows[0].size(); x++) {
+			double sum = 0;
+			for (int my=0; my<m.rows.size(); my++) {
+				sum += m.rows[my][x] * rows[y][my];
+			}
+			res.rows[y][x] = sum;
 		}
 	}
 	return res;
+	
 }
 
 Matrix::Matrix(int nRow, int nCol) {
@@ -190,9 +196,28 @@ vector<Matrix> calcBis(vector<Matrix> &ls, vector<Matrix> &ansBlocks) {
 	return bis;
 }
 
-//vector<Matrix> solveXBlocks(vector<Matrix> ls, vector<Matrix> bis, vector<Matrix> ans, vector<Matrix> gs) {
-	
-//}
+vector<Matrix> makeGHats(vector<Matrix> &gs, int blockSize, int bandwidth) {
+	vector<Matrix> gHats;
+	int firstZero = blockSize - bandwidth;
+	for (int i=0; i<gs.size(); i++) {
+		Matrix gHat = Matrix(blockSize, bandwidth);
+		for (int y=0; y<blockSize; y++) {
+			for (int x=0; x<bandwidth; x++) {
+				gHat.rows[y][x] = gs[i].rows[y][firstZero + x];
+			}
+
+		}
+		gHats.push_back(gHat);
+	}
+	return gHats;
+}
+
+vector<Matrix> solveXBlocks(vector<Matrix> &ls, vector<Matrix> &bis, vector<Matrix> &ans, vector<Matrix> &gs, int bandwidth) {
+	int blockSize = ls[0].rows.size();
+	vector<Matrix> gHats = makeGHats(gs, blockSize, bandwidth);
+	vector<Matrix> foo;
+	return foo;
+}
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -202,16 +227,16 @@ int _tmain(int argc, _TCHAR* argv[])
 	Matrix coefs = Matrix(mtxSize, mtxSize);
 	coefs.populateDiagonal(0, 0, 1);
 	coefs.populateDiagonal(1, 0, -1);
-	coefs.populateDiagonal(2, 0, -2);
+	//coefs.populateDiagonal(2, 0, -2);
 	vector<Matrix> rs = sliceRs(coefs, blockSize);
 	vector<Matrix> ls = sliceLs(coefs, blockSize);
 	vector<Matrix> gs = calcGs(rs, ls);
-	
+	int bandwidth = 2;
 	Matrix ans = Matrix(mtxSize, 1);
 	ans.populateCol(0, 1);
 	vector<Matrix> ansBlocks = ans.asRowBlocks(blockSize);
 	vector<Matrix> bis = calcBis(ls, ansBlocks);
-	//vector<Matrix> xBlocks = solveXBlocks(ls, bis, ansBlocks, gs);
+	vector<Matrix> xBlocks = solveXBlocks(ls, bis, ansBlocks, gs, bandwidth);
 	return 0;
 }
 
