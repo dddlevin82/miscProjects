@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.4-1.40.13 (MiKTeX 2.9) (preloaded format=pdflatex 2013.4.24)  18 OCT 2013 11:42
+This is pdfTeX, Version 3.1415926-2.4-1.40.13 (MiKTeX 2.9) (preloaded format=pdflatex 2013.4.24)  18 OCT 2013 12:25
 entering extended mode
 **writeup.tex
 (C:\Users\Daniel\Documents\GitHub\miscProjects\octaveStuff\writeup.tex
@@ -169,34 +169,54 @@ vm, fod, prediction))[]
 
 [1
 
-{C:/Users/Daniel/AppData/Local/MiKTeX/2.9/pdftex/config/pdftex.map}]
+{C:/Users/Daniel/AppData/Local/MiKTeX/2.9/pdftex/config/pdftex.map}] [2]
+<output2.png, id=18, 578.16pt x 433.62pt>
+File: output2.png Graphic file (type png)
+ <use output2.png>
+Package pdftex.def Info: output2.png used on input line 129.
+(pdftex.def)             Requested size: 312.9803pt x 234.73357pt.
+
+<output5.png, id=20, 578.16pt x 433.62pt>
+File: output5.png Graphic file (type png)
+ <use output5.png>
+Package pdftex.def Info: output5.png used on input line 130.
+(pdftex.def)             Requested size: 312.9803pt x 234.73357pt.
+
+<output9.png, id=21, 578.16pt x 433.62pt>
+File: output9.png Graphic file (type png)
+ <use output9.png>
+Package pdftex.def Info: output9.png used on input line 131.
+(pdftex.def)             Requested size: 312.9803pt x 234.73357pt.
+ [3 <C:/Users/Daniel/Documents/GitHub/miscProjects/octaveStuff/output2.png> <C:
+/Users/Daniel/Documents/GitHub/miscProjects/octaveStuff/output5.png>]
 
 Package caption Warning: Unused \captionsetup[sub] on input line 15.
 See the caption package documentation for explanation.
 
-[2] (C:\Users\Daniel\Documents\GitHub\miscProjects\octaveStuff\writeup.aux) ) 
+[4 <C:/Users/Daniel/Documents/GitHub/miscProjects/octaveStuff/output9.png>]
+(C:\Users\Daniel\Documents\GitHub\miscProjects\octaveStuff\writeup.aux) ) 
 Here is how much of TeX's memory you used:
- 2424 strings out of 493921
- 37842 string characters out of 3144873
- 98878 words of memory out of 3000000
- 5729 multiletter control sequences out of 15000+200000
+ 2442 strings out of 493921
+ 38091 string characters out of 3144873
+ 100878 words of memory out of 3000000
+ 5743 multiletter control sequences out of 15000+200000
  7458 words of font info for 27 fonts, out of 3000000 for 9000
  841 hyphenation exceptions out of 8191
- 36i,12n,38p,381b,171s stack positions out of 5000i,500n,10000p,200000b,50000s
-<C
-:/Program Files (x86)/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmbx12.pfb><C:/
-Program Files (x86)/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Pr
-ogram Files (x86)/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmmi12.pfb><C:/Prog
-ram Files (x86)/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmmi8.pfb><C:/Program
- Files (x86)/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Program Fi
-les (x86)/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr6.pfb><C:/Program Files 
-(x86)/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr8.pfb><C:/Program Files (x86
-)/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Program Files (x86)/
-MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmsy8.pfb><C:/Program Files (x86)/MiK
-TeX 2.9/fonts/type1/public/amsfonts/cm/cmtt12.pfb>
-Output written on writeup.pdf (2 pages, 99424 bytes).
+ 36i,12n,38p,1102b,251s stack positions out of 5000i,500n,10000p,200000b,50000s
+<C:/Pr
+ogram Files (x86)/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmbx12.pfb><C:/Prog
+ram Files (x86)/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Progra
+m Files (x86)/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmmi12.pfb><C:/Program 
+Files (x86)/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmmi8.pfb><C:/Program Fil
+es (x86)/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Program Files 
+(x86)/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr6.pfb><C:/Program Files (x86
+)/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr8.pfb><C:/Program Files (x86)/Mi
+KTeX 2.9/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Program Files (x86)/MiKT
+eX 2.9/fonts/type1/public/amsfonts/cm/cmsy8.pfb><C:/Program Files (x86)/MiKTeX 
+2.9/fonts/type1/public/amsfonts/cm/cmtt12.pfb>
+Output written on writeup.pdf (4 pages, 201671 bytes).
 PDF statistics:
- 49 PDF objects out of 1000 (max. 8388607)
+ 62 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
- 1 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 16 words of extra memory for PDF output out of 10000 (max. 10000000)
 

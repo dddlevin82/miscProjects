@@ -47,7 +47,7 @@ def iterateLeapFrog(nts, yuMtx, dt, invSvm, fod):
 		yuLast = store
 	return yuMtx
 
-def findMaxIdx(xs, printme):
+def findMaxIdx(xs):
 	maxIdx = 0
 	for i in range(len(xs)):
 		if (xs[i] > xs[maxIdx]):
@@ -59,8 +59,8 @@ def avg(x, y):
 	
 def calcError(a, b):
 	
-	maxA = findMaxIdx(a, 'a')
-	maxB = findMaxIdx(b, 'b')
+	maxA = findMaxIdx(a)
+	maxB = findMaxIdx(b)
 	print maxA
 	print maxB
 	return abs(.5 * ((a[maxA] - b[maxA]) / avg(a[maxA], b[maxA]) + (a[maxB] - b[maxB]) / avg(a[maxB], b[maxB])))
