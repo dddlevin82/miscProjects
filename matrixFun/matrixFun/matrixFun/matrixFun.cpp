@@ -16,7 +16,7 @@ public:
 	void appendCol(Matrix &col);
 	Matrix sliceCol(int col);
 	Matrix sliceRow(int row);
-	
+	Matrix sliceRows(int min, int max); //up to but not including b
 	Matrix sliceBlock(int row, int col, int numRows, int numCols);
 	vector<Matrix> asRowBlocks(int numBlocks);
 	Matrix operator + (Matrix &m);
@@ -87,6 +87,14 @@ Matrix Matrix::sliceRow(int nRow) {
 	return destRow;
 }
 
+Matrix Matrix::sliceRows(int min, int max) {
+	Matrix sliced = Matrix(max - min, rows[0].size());
+	for (int i=min; i<max; i++) {
+		sliced.rows[i - min] = rows[i];
+	}
+	return sliced;
+}
+
 Matrix Matrix::sliceBlock(int row, int col, int nRows, int nCols) {
 	Matrix block = Matrix(nRows, nCols);
 	for (int y=0; y<nRows; y++) {
@@ -123,6 +131,18 @@ void Matrix::populateDiagonal(int row, int col, double val) {
 		y++;
 		x++;
 	}
+}
+
+class SplitMatrix {
+public:
+	SplitMatrix(Matrix &top, Matrix &bottom);
+	Matrix top;
+	Matrix bottom;
+};
+
+SplitMatrix::SplitMatrix(Matrix &top_, Matrix &bottom_) : top(top_), bottom(bottom_) {
+	this->top = top;
+	this->bottom = bottom;
 }
 
 Matrix forwardSubCol(Matrix &coefs, Matrix &eqls) {
@@ -212,9 +232,33 @@ vector<Matrix> makeGHats(vector<Matrix> &gs, int blockSize, int bandwidth) {
 	return gHats;
 }
 
+vector<SplitMatrix> splitByBand(vector<Matrix> &mtx, int blockSize, int bandwidth) {
+	vector<SplitMatrix> split;
+	for (int i=0; i<mtx.size(); i++) {
+		split.push_back(SplitMatrix(mtx[i].sliceRows(0, blockSize - bandwidth), mtx[i].sliceRows(blockSize - bandwidth, blockSize))); 
+	}
+	return split;
+}
+
+vector<Matrix> solveZs(vector<SplitMatrix> UVs, vector<SplitMatrix> MHs) {
+	vector<Matrix> zs;
+	zs.push_back(UVs[0].bottom);
+	for (int i=1; i<UVs.size(); i++) {
+		zs.push_back(UVs[i].bottom - MHs[i-1].bottom * zs[i-1]);
+	}
+	return zs;
+}
+
 vector<Matrix> solveXBlocks(vector<Matrix> &ls, vector<Matrix> &bis, vector<Matrix> &ans, vector<Matrix> &gs, int bandwidth) {
 	int blockSize = ls[0].rows.size();
 	vector<Matrix> gHats = makeGHats(gs, blockSize, bandwidth);
+	vector<SplitMatrix> MHs = splitByBand(gHats, blockSize, bandwidth);
+	vector<SplitMatrix> UVs = splitByBand(bis, blockSize, bandwidth);
+	vector<Matrix> zs = solveZs(UVs, MHs);
+	vector<Matrix> ys;
+	zs.push_back(UVs[0].bottom);
+	ys.push_back(UVs[0].top);
+
 	vector<Matrix> foo;
 	return foo;
 }
