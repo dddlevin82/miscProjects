@@ -240,7 +240,7 @@ vector<SplitMatrix> splitByBand(vector<Matrix> &mtx, int blockSize, int bandwidt
 	return split;
 }
 
-vector<Matrix> solveZs(vector<SplitMatrix> UVs, vector<SplitMatrix> MHs) {
+vector<Matrix> solveZs(vector<SplitMatrix> &UVs, vector<SplitMatrix> &MHs) {
 	vector<Matrix> zs;
 	zs.push_back(UVs[0].bottom);
 	for (int i=1; i<UVs.size(); i++) {
@@ -249,18 +249,38 @@ vector<Matrix> solveZs(vector<SplitMatrix> UVs, vector<SplitMatrix> MHs) {
 	return zs;
 }
 
-vector<Matrix> solveXBlocks(vector<Matrix> &ls, vector<Matrix> &bis, vector<Matrix> &ans, vector<Matrix> &gs, int bandwidth) {
+vector<Matrix> solveYs(vector<SplitMatrix> &UVs, vector<SplitMatrix> &MHs, vector<Matrix> &zs) {
+	vector<Matrix> ys;
+	ys.push_back(UVs[0].top);
+	for (int i=1; i<UVs.size(); i++) {
+		ys.push_back(UVs[i].top - MHs[i-1].top * zs[i-1]);
+	}
+	return ys;
+}
+
+Matrix solveXs(vector<Matrix> &ls, vector<Matrix> &bis, vector<Matrix> &ans, vector<Matrix> &gs, int bandwidth) {
 	int blockSize = ls[0].rows.size();
 	vector<Matrix> gHats = makeGHats(gs, blockSize, bandwidth);
 	vector<SplitMatrix> MHs = splitByBand(gHats, blockSize, bandwidth);
 	vector<SplitMatrix> UVs = splitByBand(bis, blockSize, bandwidth);
 	vector<Matrix> zs = solveZs(UVs, MHs);
-	vector<Matrix> ys;
-	zs.push_back(UVs[0].bottom);
-	ys.push_back(UVs[0].top);
+	vector<Matrix> ys = solveYs(UVs, MHs, zs);
+	Matrix xs = Matrix(zs.size() * zs[0].rows.size() + ys.size() * ys[0].rows.size(), 1);
+	int index = 0;
+	for (int i=0; i<zs.size(); i++) {
+		Matrix *yGroup = &ys[i];
+		Matrix *zGroup = &zs[i];
 
-	vector<Matrix> foo;
-	return foo;
+		for (int row=0; row<yGroup->rows.size(); row++) {
+			xs.rows[index][0] = yGroup->rows[row][0];
+			index++;
+		}
+		for (int row=0; row<zGroup->rows.size(); row++) {
+			xs.rows[index][0] = zGroup->rows[row][0];
+			index++;
+		}
+	}
+	return xs;
 }
 
 int _tmain(int argc, _TCHAR* argv[])
@@ -280,7 +300,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	ans.populateCol(0, 1);
 	vector<Matrix> ansBlocks = ans.asRowBlocks(blockSize);
 	vector<Matrix> bis = calcBis(ls, ansBlocks);
-	vector<Matrix> xBlocks = solveXBlocks(ls, bis, ansBlocks, gs, bandwidth);
+	Matrix xs = solveXs(ls, bis, ansBlocks, gs, bandwidth);
 	return 0;
 }
 
