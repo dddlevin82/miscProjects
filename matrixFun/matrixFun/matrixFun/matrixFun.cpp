@@ -14,14 +14,17 @@ public:
 	void populateRow(int row, double val);
 	void populateCol(int col, double val);
 	void appendCol(Matrix &col);
+	void pasteIn(Matrix &paste, int row, int col);
 	Matrix sliceCol(int col);
 	Matrix sliceRow(int row);
 	Matrix sliceRows(int min, int max); //up to but not including b
 	Matrix sliceBlock(int row, int col, int numRows, int numCols);
+	
 	vector<Matrix> asRowBlocks(int numBlocks);
 	Matrix operator + (Matrix &m);
 	Matrix operator - (Matrix &m);
 	Matrix operator * (Matrix &m);
+	Matrix operator * (double x);
 };
 
 Matrix Matrix::operator+ (Matrix &m) {
@@ -58,6 +61,16 @@ Matrix Matrix::operator* (Matrix &m) {
 	}
 	return res;
 	
+}
+
+Matrix Matrix::operator* (double x) {
+	Matrix res = Matrix(rows.size(), rows[0].size());
+	for (int row=0; row<rows.size(); row++) {
+		for (int col=0; col<rows[0].size(); col++) {
+			res.rows[row][col] = rows[row][col] * x;
+		}
+	}
+	return res;
 }
 
 Matrix::Matrix(int nRow, int nCol) {
@@ -103,6 +116,14 @@ Matrix Matrix::sliceBlock(int row, int col, int nRows, int nCols) {
 		}
 	}
 	return block;
+}
+
+void Matrix::pasteIn(Matrix &paste, int row, int col) {
+	for (int y=0; y<paste.rows.size(); y++) {
+		for (int x=0; x<paste.rows[0].size(); x++) {
+			rows[row+y][col+x] = paste.rows[y][x];
+		}
+	}
 }
 
 void Matrix::populateRow(int nRow, double val) {
@@ -240,13 +261,54 @@ vector<SplitMatrix> splitByBand(vector<Matrix> &mtx, int blockSize, int bandwidt
 	return split;
 }
 
-vector<Matrix> solveZs(vector<SplitMatrix> &UVs, vector<SplitMatrix> &MHs) {
+vector<Matrix> solveZsBlockInv(vector<SplitMatrix> &UVs, vector<SplitMatrix> &MHs) {
 	vector<Matrix> zs;
 	zs.push_back(UVs[0].bottom);
 	for (int i=1; i<UVs.size(); i++) {
 		zs.push_back(UVs[i].bottom - MHs[i-1].bottom * zs[i-1]);
 	}
 	return zs;
+}
+
+vector<Matrix> assemblePrefixComponents(vector<SplitMatrix> &MHs, vector<SplitMatrix> &UVs) {
+	vector<Matrix> comps;
+	for (int i=0; i<MHs.size(); i++) {
+		comps.push_back(Matrix(UVs[i].bottom.rows.size() + 1, MHs[i].bottom.rows[0].size() + 1));
+		Matrix *curMtx = &comps[comps.size() - 1];
+		curMtx->pasteIn(MHs[i].bottom * -1, 0, 0);
+		curMtx->pasteIn(UVs[i].bottom, 0, MHs[0].bottom.rows[0].size());
+
+	}
+	return comps;
+}
+
+vector<Matrix> recursiveSolvePrefix(vector<Matrix> xs) {
+	//xs should be [h0, h1, h2...]
+	if (xs.size() == 1) {
+		return xs;
+	} else {
+		vector<Matrix> products;
+		for (int i=0; i<xs.size(); i+=2) {
+			products.push_back(xs[i+1] * xs[i]);
+		}
+		vector<Matrix> prefixed = recursiveSolvePrefix(products);
+		vector<Matrix> result;
+		//odd indeces are solved in prefixed
+		//even indexies are inv([xs[next odd]) prefixed[next odd / 2]
+		//behold:
+		for (int i=0; i<prefixed.size(); i++) {
+			//result.push_back(xs[2*i+1].inv() * prefixed[i]) xs are singular.  not sure how to do this.
+			result.push_back(prefixed[i]);
+		}
+		return result;
+
+	}
+}
+
+vector<Matrix> solveZsPrefix(vector<SplitMatrix> MHs, vector<SplitMatrix> UVs) {
+	vector<Matrix> continComponents = assemblePrefixComponents(MHs, UVs);
+	vector<Matrix> foo;
+	return foo;
 }
 
 vector<Matrix> solveYs(vector<SplitMatrix> &UVs, vector<SplitMatrix> &MHs, vector<Matrix> &zs) {
@@ -263,24 +325,26 @@ Matrix solveXs(vector<Matrix> &ls, vector<Matrix> &bis, vector<Matrix> &ans, vec
 	vector<Matrix> gHats = makeGHats(gs, blockSize, bandwidth);
 	vector<SplitMatrix> MHs = splitByBand(gHats, blockSize, bandwidth);
 	vector<SplitMatrix> UVs = splitByBand(bis, blockSize, bandwidth);
-	vector<Matrix> zs = solveZs(UVs, MHs);
-	vector<Matrix> ys = solveYs(UVs, MHs, zs);
-	Matrix xs = Matrix(zs.size() * zs[0].rows.size() + ys.size() * ys[0].rows.size(), 1);
-	int index = 0;
-	for (int i=0; i<zs.size(); i++) {
-		Matrix *yGroup = &ys[i];
-		Matrix *zGroup = &zs[i];
-
-		for (int row=0; row<yGroup->rows.size(); row++) {
-			xs.rows[index][0] = yGroup->rows[row][0];
-			index++;
-		}
-		for (int row=0; row<zGroup->rows.size(); row++) {
-			xs.rows[index][0] = zGroup->rows[row][0];
-			index++;
-		}
-	}
-	return xs;
+	vector<Matrix> zs = solveZsPrefix(MHs, UVs);
+	//vector<Matrix> zs = solveZsBlockInv(UVs, MHs);
+	//vector<Matrix> ys = solveYs(UVs, MHs, zs);
+//	Matrix xs = Matrix(zs.size() * zs[0].rows.size() + ys.size() * ys[0].rows.size(), 1);
+	//int index = 0;
+	//for (int i=0; i<zs.size(); i++) {
+	//	Matrix *yGroup = &ys[i];
+	//	Matrix *zGroup = &zs[i];
+//
+	//	for (int row=0; row<yGroup->rows.size(); row++) {
+	//		xs.rows[index][0] = yGroup->rows[row][0];
+	//		index++;
+	//	}
+	//	for (int row=0; row<zGroup->rows.size(); row++) {
+	//		xs.rows[index][0] = zGroup->rows[row][0];
+	//		index++;
+	//	}
+	//}
+	//return xs;
+	return gHats[0];
 }
 
 int _tmain(int argc, _TCHAR* argv[])
