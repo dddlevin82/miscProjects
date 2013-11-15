@@ -306,7 +306,22 @@ vector<Matrix> recursiveSolvePrefix(vector<Matrix> xs) {
 }
 
 vector<Matrix> solveZsPrefix(vector<SplitMatrix> MHs, vector<SplitMatrix> UVs) {
-	vector<Matrix> continComponents = assemblePrefixComponents(MHs, UVs);
+	//vector<Matrix> continComponents = assemblePrefixComponents(MHs, UVs);
+	vector<Matrix> hProds;
+	Matrix first = Matrix(UVs[0].bottom.rows.size() + 1, MHs[0].bottom.rows[0].size() + UVs[0].bottom.rows[0].size());
+	first.populateCol(first.rows[0].size() - 1, 1);
+	first.pasteIn(UVs[0].bottom, 0, MHs[0].bottom.rows[0].size());
+	hProds.push_back(first);
+	for (int i=0; i<MHs.size(); i++) {
+		Matrix hNew = Matrix(UVs[0].bottom.rows.size() + 1, MHs[0].bottom.rows[0].size() + UVs[0].bottom.rows[0].size());
+		hNew.populateCol(hNew.rows[0].size() - 1, 1);
+		hNew.pasteIn(MHs[i].bottom * -1, 0, 0);
+		hNew.pasteIn(UVs[i + 1].bottom, 0, MHs[0].bottom.rows[0].size());
+		for (int j=hProds.size() - 1; j>=0; j--) {
+			hNew = hNew * hProds[j];
+		}
+		hProds.push_back(hNew);
+	}
 	vector<Matrix> foo;
 	return foo;
 }
@@ -327,24 +342,24 @@ Matrix solveXs(vector<Matrix> &ls, vector<Matrix> &bis, vector<Matrix> &ans, vec
 	vector<SplitMatrix> UVs = splitByBand(bis, blockSize, bandwidth);
 	vector<Matrix> zs = solveZsPrefix(MHs, UVs);
 	//vector<Matrix> zs = solveZsBlockInv(UVs, MHs);
-	//vector<Matrix> ys = solveYs(UVs, MHs, zs);
-//	Matrix xs = Matrix(zs.size() * zs[0].rows.size() + ys.size() * ys[0].rows.size(), 1);
-	//int index = 0;
-	//for (int i=0; i<zs.size(); i++) {
-	//	Matrix *yGroup = &ys[i];
-	//	Matrix *zGroup = &zs[i];
-//
-	//	for (int row=0; row<yGroup->rows.size(); row++) {
-	//		xs.rows[index][0] = yGroup->rows[row][0];
-	//		index++;
-	//	}
-	//	for (int row=0; row<zGroup->rows.size(); row++) {
-	//		xs.rows[index][0] = zGroup->rows[row][0];
-	//		index++;
-	//	}
-	//}
-	//return xs;
-	return gHats[0];
+	vector<Matrix> ys = solveYs(UVs, MHs, zs);
+	Matrix xs = Matrix(zs.size() * zs[0].rows.size() + ys.size() * ys[0].rows.size(), 1);
+	int index = 0;
+	for (int i=0; i<zs.size(); i++) {
+		Matrix *yGroup = &ys[i];
+		Matrix *zGroup = &zs[i];
+
+		for (int row=0; row<yGroup->rows.size(); row++) {
+			xs.rows[index][0] = yGroup->rows[row][0];
+			index++;
+		}
+		for (int row=0; row<zGroup->rows.size(); row++) {
+			xs.rows[index][0] = zGroup->rows[row][0];
+			index++;
+		}
+	}
+	return xs;
+	//return gHats[0];
 }
 
 int _tmain(int argc, _TCHAR* argv[])
