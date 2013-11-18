@@ -3,7 +3,7 @@
 
 #include "stdafx.h"
 #include <vector>
-
+#include <math.h> 
 using namespace std;
 
 class Matrix {
@@ -272,41 +272,89 @@ vector<Matrix> solveZsBlockInv(vector<SplitMatrix> &UVs, vector<SplitMatrix> &MH
 
 vector<Matrix> assemblePrefixComponents(vector<SplitMatrix> &MHs, vector<SplitMatrix> &UVs) {
 	vector<Matrix> comps;
+	Matrix first = Matrix(UVs[0].bottom.rows.size() + 1, MHs[0].bottom.rows[0].size() + UVs[0].bottom.rows[0].size());
+	first.populateCol(first.rows[0].size() - 1, 1);
+	first.pasteIn(UVs[0].bottom, 0, MHs[0].bottom.rows[0].size());
+	comps.push_back(first);
 	for (int i=0; i<MHs.size(); i++) {
-		comps.push_back(Matrix(UVs[i].bottom.rows.size() + 1, MHs[i].bottom.rows[0].size() + 1));
-		Matrix *curMtx = &comps[comps.size() - 1];
-		curMtx->pasteIn(MHs[i].bottom * -1, 0, 0);
-		curMtx->pasteIn(UVs[i].bottom, 0, MHs[0].bottom.rows[0].size());
-
+		Matrix compNew = Matrix(UVs[0].bottom.rows.size() + 1, MHs[0].bottom.rows[0].size() + UVs[0].bottom.rows[0].size());
+		compNew.populateCol(compNew.rows[0].size() - 1, 1);
+		compNew.pasteIn(MHs[i].bottom * -1, 0, 0);
+		compNew.pasteIn(UVs[i + 1].bottom, 0, MHs[0].bottom.rows[0].size());
+		comps.push_back(compNew);
 	}
 	return comps;
 }
 
 vector<Matrix> recursiveSolvePrefix(vector<Matrix> xs) {
-	//xs should be [h0, h1, h2...]
+	vector<Matrix> prods;
 	if (xs.size() == 1) {
 		return xs;
-	} else {
-		vector<Matrix> products;
-		for (int i=0; i<xs.size(); i+=2) {
-			products.push_back(xs[i+1] * xs[i]);
-		}
-		vector<Matrix> prefixed = recursiveSolvePrefix(products);
-		vector<Matrix> result;
-		//odd indeces are solved in prefixed
-		//even indexies are inv([xs[next odd]) prefixed[next odd / 2]
-		//behold:
-		for (int i=0; i<prefixed.size(); i++) {
-			//result.push_back(xs[2*i+1].inv() * prefixed[i]) xs are singular.  not sure how to do this.
-			result.push_back(prefixed[i]);
-		}
-		return result;
-
 	}
+	for (int i=0; i<xs.size(); i+=2) {
+		prods.push_back(xs[i+1] * xs[i]);
+	}
+	vector<Matrix> prefixed = recursiveSolvePrefix(prods);
+	for (int i=1; i<xs.size(); i+=2) {
+		printf("%d", i);
+		xs[i] = prefixed[(i-1)/2];
+	}
+	for (int i=2; i<xs.size(); i+=2) {
+		xs[i] = xs[i] * xs[i-1];		
+	}
+	return xs;
+}
+
+vector<Matrix> solvePrefix(vector<Matrix> xs) {
+	//xs should be [h0, h1, h2...]
+	int level = 0;
+	int numLevels = (int) (log((double) xs.size()) / log(2.) + .5); 
+	//int loopForward 
+	for (int i=0; i<numLevels; i++) {
+		int stepSize = pow(2., i + 1);
+		int lookForward = pow(2., i);
+		int start = pow(2., i) - 1;
+		for (int j=start; j<xs.size(); j+=stepSize) {
+			xs[j+lookForward] = xs[j+lookForward] * xs[j];
+		}
+	}
+	for (int i=numLevels-1; i>=1; i--) {
+		int start = pow(2., numLevels - i);
+		int lookForward = pow(2., i-1);
+		int stepSize = pow(2.,i);
+		//don't need to do first because it's already computed
+		int loopNum = 0;
+		for (int j=start; j<xs.size(); j+=stepSize) {
+			
+			int lookBack = pow(2., loopNum);  
+			xs[j] = xs[j]*xs[j-lookBack];
+			loopNum += 1;
+		}
+	}
+
+
+
+	//for (int i=pow(2, (double) level)-1; i<xs.size(); i+=step) {
+	//	xs[i+step] = xs[i+step] * xs[i];
+	//}
+
+	//vector<Matrix> prefixed = recursiveSolvePrefix(products);
+	//vector<Matrix> result;
+	//result.push_back(xs[0]);
+	//result.push_back(prefixed[0]);
+	//for (int i=1; i<prefixed.size(); i++) {
+	//	result.push_back(xs[2 * i] * prefixed[i - 1]);
+	//	result.push_back(prefixed[i]);
+	//}
+
+	return xs;
+
+	
 }
 
 vector<Matrix> solveZsPrefix(vector<SplitMatrix> MHs, vector<SplitMatrix> UVs) {
-	//vector<Matrix> continComponents = assemblePrefixComponents(MHs, UVs);
+	vector<Matrix> continComponents = assemblePrefixComponents(MHs, UVs);
+	vector<Matrix> continProds = recursiveSolvePrefix(continComponents);
 	vector<Matrix> hProds;
 	Matrix first = Matrix(UVs[0].bottom.rows.size() + 1, MHs[0].bottom.rows[0].size() + UVs[0].bottom.rows[0].size());
 	first.populateCol(first.rows[0].size() - 1, 1);
@@ -364,7 +412,7 @@ Matrix solveXs(vector<Matrix> &ls, vector<Matrix> &bis, vector<Matrix> &ans, vec
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	int numProc = 4;
+	int numProc = 8;
 	int blockSize = 5;
 	int mtxSize = numProc * blockSize;
 	Matrix coefs = Matrix(mtxSize, mtxSize);
