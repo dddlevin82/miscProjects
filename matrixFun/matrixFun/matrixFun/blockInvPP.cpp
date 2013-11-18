@@ -1,4 +1,8 @@
 #include "Matrix.h"
+#include <math.h>
+#include <stdio.h>
+
+using namespace std;
 
 Matrix forwardSubCol(Matrix &coefs, Matrix &eqls) {
 	Matrix xs = Matrix(eqls.rows.size(), 1);
@@ -108,30 +112,44 @@ vector<Matrix> assemblePrefixComponents(vector<SplitMatrix> &MHs, vector<SplitMa
 	return comps;
 }
 
-vector<Matrix> recursiveSolvePrefix(vector<Matrix> xs, vector<Matrix> &prods) {
-
-	if (xs.size() == 1) {
-		return xs;
-	}
-	for (int i=0; i<xs.size(); i+=2) {
-		prods[i] = (xs[i+1] * xs[i]);
-	}
-	vector<Matrix> prodsNext = allocateBlankMtxs(prods.size() / 2);
-	vector<Matrix> prefixed = recursiveSolvePrefix(prods);
-	for (int i=1; i<xs.size(); i+=2) {
-		printf("%d", i);
-		xs[i] = prefixed[(i-1)/2];
-	}
-	for (int i=2; i<xs.size(); i+=2) {
-		xs[i] = xs[i] * xs[i-1];		
-	}
-	return xs;
+vector<Matrix> *allocateNMatrices(int n) {
+    vector<Matrix> *ret = new vector<Matrix>;
+    for (int i=0; i<n; i++) {
+        ret->push_back(Matrix(0,0));
+    }
+    return ret;
 }
 
+void recursiveSolvePrefix(vector<Matrix> &xs) {
+
+    int n = xs.size();
+    int numLevels = (int) (log((double) xs.size()) / log(2.) + .5); 
+    for (int i=0; i<numLevels; i++) {
+        int stepSize = pow(2., i + 1);
+        int lookForward = pow(2., i);
+        int start = pow(2., i) - 1;
+        for (int j=start; j<xs.size(); j+=stepSize) {
+            xs[j+lookForward] = xs[j+lookForward] * xs[j];
+        }
+    }
+
+    for (int k = pow(2,n-1); k>0; k/=2) {
+        for (int i=k-1; i<n-1; i+=k) {
+            xs[i+k] = xs[i+k] * xs[i];
+        }
+    }
+}
 
 vector<Matrix> solveZsPrefix(vector<SplitMatrix> MHs, vector<SplitMatrix> UVs) {
 	vector<Matrix> continComponents = assemblePrefixComponents(MHs, UVs);
-	vector<Matrix> continProds = recursiveSolvePrefix(continComponents);
+    for (int i=0; i<continComponents.size(); i++) {
+        printf("%d: %f %f \n", i, continComponents[i].rows[0][2], continComponents[i].rows[1][2]);
+    }
+	recursiveSolvePrefix(continComponents);
+    for (int i=0; i<continComponents.size(); i++) {
+        printf("%d: %f %f \n", i, continComponents[i].rows[0][2], continComponents[i].rows[1][2]);
+    }
+
 	vector<Matrix> hProds;
 	Matrix first = Matrix(UVs[0].bottom.rows.size() + 1, MHs[0].bottom.rows[0].size() + UVs[0].bottom.rows[0].size());
 	first.populateCol(first.rows[0].size() - 1, 1);
@@ -155,7 +173,7 @@ vector<Matrix> solveYs(vector<SplitMatrix> &UVs, vector<SplitMatrix> &MHs, vecto
 	vector<Matrix> ys;
 	ys.push_back(UVs[0].top);
 	for (int i=1; i<UVs.size(); i++) {
-		ys.push_back(UVs[i].top - MHs[i-1].top * zs[i-1]);
+		//ys.push_back(UVs[i].top - MHs[i-1].top * zs[i-1]);
 	}
 	return ys;
 }
@@ -166,6 +184,7 @@ Matrix solveXs(vector<Matrix> &ls, vector<Matrix> &bis, vector<Matrix> &ans, vec
 	vector<SplitMatrix> MHs = splitByBand(gHats, blockSize, bandwidth);
 	vector<SplitMatrix> UVs = splitByBand(bis, blockSize, bandwidth);
 	vector<Matrix> zs = solveZsPrefix(MHs, UVs);
+    /*
 	//vector<Matrix> zs = solveZsBlockInv(UVs, MHs);
 	vector<Matrix> ys = solveYs(UVs, MHs, zs);
 	Matrix xs = Matrix(zs.size() * zs[0].rows.size() + ys.size() * ys[0].rows.size(), 1);
@@ -184,7 +203,8 @@ Matrix solveXs(vector<Matrix> &ls, vector<Matrix> &bis, vector<Matrix> &ans, vec
 		}
 	}
 	return xs;
-	//return gHats[0];
+    */
+	return gHats[0];
 }
 
 int main(int argc, char *argv[])
