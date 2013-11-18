@@ -13,7 +13,6 @@ Matrix forwardSubCol(Matrix &coefs, Matrix &eqls) {
 	return xs;
 }
 
-
 Matrix forwardSub(Matrix &coefs, Matrix &eqls) {
 	Matrix xs = Matrix(coefs.rows.size(), 0);
 	for (int x=0; x<eqls.rows[0].size(); x++) {
@@ -77,7 +76,9 @@ vector<Matrix> makeGHats(vector<Matrix> &gs, int blockSize, int bandwidth) {
 vector<SplitMatrix> splitByBand(vector<Matrix> &mtx, int blockSize, int bandwidth) {
 	vector<SplitMatrix> split;
 	for (int i=0; i<mtx.size(); i++) {
-		split.push_back(SplitMatrix(mtx[i].sliceRows(0, blockSize - bandwidth), mtx[i].sliceRows(blockSize - bandwidth, blockSize))); 
+        Matrix top = mtx[i].sliceRows(0, blockSize - bandwidth);
+        Matrix bot = mtx[i].sliceRows(blockSize - bandwidth, blockSize);
+		split.push_back(SplitMatrix(top, bot)); 
 	}
 	return split;
 }
@@ -107,15 +108,15 @@ vector<Matrix> assemblePrefixComponents(vector<SplitMatrix> &MHs, vector<SplitMa
 	return comps;
 }
 
-vector<Matrix> recursiveSolvePrefix(vector<Matrix> xs, vector<Matrix> *prods) {
+vector<Matrix> recursiveSolvePrefix(vector<Matrix> xs, vector<Matrix> &prods) {
 
 	if (xs.size() == 1) {
 		return xs;
 	}
 	for (int i=0; i<xs.size(); i+=2) {
-		prods[whatever] = (xs[i+1] * xs[i]);
+		prods[i] = (xs[i+1] * xs[i]);
 	}
-	vector<Matrix> prodsNext = allocateBlankMtxs(prods->size() / 2);
+	vector<Matrix> prodsNext = allocateBlankMtxs(prods.size() / 2);
 	vector<Matrix> prefixed = recursiveSolvePrefix(prods);
 	for (int i=1; i<xs.size(); i+=2) {
 		printf("%d", i);

@@ -13,7 +13,8 @@ class Matrix {
     void populateDiagonal(int row, int col, double val); 
 
 	void appendCol(Matrix &col);
-	void pasteIn(Matrix &paste, int row, int col);
+	//void pasteIn(Matrix &paste, int row, int col);
+	void pasteIn(Matrix paste, int row, int col);
 	
 	Matrix sliceRow(int row);
     Matrix sliceCol(int col);
@@ -23,6 +24,7 @@ class Matrix {
 
 	Matrix operator+ (Matrix &m);
 	Matrix operator- (Matrix &m);
+	Matrix operator- (Matrix m);
 	Matrix operator* (Matrix &m);
 	Matrix operator* (double x);
 };

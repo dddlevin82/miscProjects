@@ -56,7 +56,7 @@ void Matrix::appendCol(Matrix &col)
 	}
 }
 
-void Matrix::pasteIn(Matrix &paste, int row, int col) 
+void Matrix::pasteIn(Matrix paste, int row, int col)
 {
 	for (int y=0; y<paste.rows.size(); y++) {
 		for (int x=0; x<paste.rows[0].size(); x++) {
@@ -139,6 +139,17 @@ Matrix Matrix::operator- (Matrix &m)
 	}
 	return res;
 }
+Matrix Matrix::operator- (Matrix m) 
+{
+	Matrix res = Matrix(rows.size(), rows[0].size());
+	for (int y=0; y<rows.size(); y++) {
+		for (int x=0; x<rows[0].size();  x++) {
+			res.rows[y][x] = rows[y][x] - m.rows[y][x];
+		}
+	}
+	return res;
+}
+
 
 Matrix Matrix::operator* (Matrix &m) 
 {
