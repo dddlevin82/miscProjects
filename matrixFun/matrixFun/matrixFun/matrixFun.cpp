@@ -286,14 +286,17 @@ vector<Matrix> assemblePrefixComponents(vector<SplitMatrix> &MHs, vector<SplitMa
 	return comps;
 }
 
-vector<Matrix> recursiveSolvePrefix(vector<Matrix> xs) {
-	vector<Matrix> prods;
+vector<Matrix> 
+
+vector<Matrix> recursiveSolvePrefix(vector<Matrix> xs, vector<Matrix> *prods) {
+
 	if (xs.size() == 1) {
 		return xs;
 	}
 	for (int i=0; i<xs.size(); i+=2) {
-		prods.push_back(xs[i+1] * xs[i]);
+		prods[whatever] = (xs[i+1] * xs[i]);
 	}
+	vector<Matrix> prodsNext = allocateBlankMtxs(prods->size() / 2);
 	vector<Matrix> prefixed = recursiveSolvePrefix(prods);
 	for (int i=1; i<xs.size(); i+=2) {
 		printf("%d", i);
