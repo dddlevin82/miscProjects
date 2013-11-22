@@ -7,7 +7,7 @@
 #include <windows.h> 
 #include <tchar.h>
 #include <strsafe.h>
-#define numProc 16
+#define numProc 8
 using namespace std;
 
 struct ClimbParam {
@@ -218,8 +218,6 @@ vector<Matrix> solveYs(vector<SplitMatrix> &UVs, vector<SplitMatrix> &MHs, vecto
 	for (int i=0; i<UVs.size(); i++) {
 		ys.push_back(Matrix(0, 0));
 	}
-	
-	//ys.push_back(UVs[0].top);
 	HANDLE yHandles[numProc];
 	SolveYParam params[numProc];
 	SolveYParam firstParam;
@@ -237,13 +235,28 @@ vector<Matrix> solveYs(vector<SplitMatrix> &UVs, vector<SplitMatrix> &MHs, vecto
 		next.zs = &zs;
 		params[i] = next;
 		yHandles[i] = CreateThread(NULL, 0, restYs, &params[i], 0, NULL);
-		//ys.push_back(UVs[i].top - MHs[i-1].top * zs[i-1]);
 	}
 	WaitForMultipleObjects(numProc, yHandles, TRUE, INFINITE);
 	for (int i=0; i<sizeof(yHandles) / sizeof(int); i++) {
 		CloseHandle(yHandles[i]);
 	}
 	return ys;
+}
+
+Matrix assembleXs(vector<Matrix> &ys, vector<Matrix> &zs) {
+	Matrix xs = Matrix(ys.size() * ys[0].rows.size() + zs.size() * zs[0].rows.size(), 1);
+	int idx = 0;
+	for (int i=0; i<ys.size(); i++) {
+		for (int j=0; j<ys[i].rows.size(); j++) {
+			xs.rows[idx][0] = ys[i].rows[j][0];
+			idx++;
+		}
+		for (int k=0; k<zs[i].rows.size(); k++) {
+			xs.rows[idx][0] = zs[i].rows[k][0];
+			idx++;
+		}
+	}
+	return xs;
 }
 
 Matrix solveXs(vector<Matrix> &ls, vector<Matrix> &bis, vector<Matrix> &ans, vector<Matrix> &gs, int bandwidth) {
@@ -254,32 +267,15 @@ Matrix solveXs(vector<Matrix> &ls, vector<Matrix> &bis, vector<Matrix> &ans, vec
 	vector<Matrix> zs = solveZsPrefix(MHs, UVs);
     
 	vector<Matrix> ys = solveYs(UVs, MHs, zs);
-	/*
-	Matrix xs = Matrix(zs.size() * zs[0].rows.size() + ys.size() * ys[0].rows.size(), 1);
-	int index = 0;
-	for (int i=0; i<zs.size(); i++) {
-		Matrix *yGroup = &ys[i];
-		Matrix *zGroup = &zs[i];
-
-		for (int row=0; row<yGroup->rows.size(); row++) {
-			xs.rows[index][0] = yGroup->rows[row][0];
-			index++;
-		}
-		for (int row=0; row<zGroup->rows.size(); row++) {
-			xs.rows[index][0] = zGroup->rows[row][0];
-			index++;
-		}
-	}
+	Matrix xs = assembleXs(ys, zs);
 	return xs;
-    */
-	return gHats[0];
 }
 
 
 int main(int argc, char *argv[])
 {
 
-	int blockSize = 5;
+	int blockSize = 30;
 	int mtxSize = numProc * blockSize;
 	Matrix coefs = Matrix(mtxSize, mtxSize);
 	coefs.populateDiagonal(0, 0, 1);
