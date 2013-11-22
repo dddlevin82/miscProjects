@@ -286,21 +286,18 @@ vector<Matrix> assemblePrefixComponents(vector<SplitMatrix> &MHs, vector<SplitMa
 	return comps;
 }
 
-vector<Matrix> 
-
-vector<Matrix> recursiveSolvePrefix(vector<Matrix> xs, vector<Matrix> *prods) {
-
+vector<Matrix> recursiveSolvePrefix(vector<Matrix> xs) {
+	vector<Matrix> prods;
 	if (xs.size() == 1) {
 		return xs;
 	}
 	for (int i=0; i<xs.size(); i+=2) {
-		prods[whatever] = (xs[i+1] * xs[i]);
+		prods.push_back(xs[i+1] * xs[i]);
 	}
-	vector<Matrix> prodsNext = allocateBlankMtxs(prods->size() / 2);
 	vector<Matrix> prefixed = recursiveSolvePrefix(prods);
 	for (int i=1; i<xs.size(); i+=2) {
-		printf("%d", i);
-		xs[i] = prefixed[(i-1)/2];
+
+		xs[i] = prods[(i-1)/2];
 	}
 	for (int i=2; i<xs.size(); i+=2) {
 		xs[i] = xs[i] * xs[i-1];		
@@ -308,6 +305,52 @@ vector<Matrix> recursiveSolvePrefix(vector<Matrix> xs, vector<Matrix> *prods) {
 	return xs;
 }
 
+vector<Matrix> solvePrefix(vector<Matrix> xs) {
+	//xs should be [h0, h1, h2...]
+	int level = 0;
+	int numLevels = (int) (log((double) xs.size()) / log(2.) + .5); 
+	//int loopForward 
+	for (int i=0; i<numLevels; i++) {
+		int stepSize = pow(2., i + 1);
+		int lookForward = pow(2., i);
+		int start = pow(2., i) - 1;
+		for (int j=start; j<xs.size(); j+=stepSize) {
+			xs[j+lookForward] = xs[j+lookForward] * xs[j];
+		}
+	}
+	for (int i=numLevels-1; i>=1; i--) {
+		int start = pow(2., numLevels - i);
+		int lookForward = pow(2., i-1);
+		int stepSize = pow(2.,i);
+		//don't need to do first because it's already computed
+		int loopNum = 0;
+		for (int j=start; j<xs.size(); j+=stepSize) {
+			
+			int lookBack = pow(2., loopNum);  
+			xs[j] = xs[j]*xs[j-lookBack];
+			loopNum += 1;
+		}
+	}
+
+
+
+	//for (int i=pow(2, (double) level)-1; i<xs.size(); i+=step) {
+	//	xs[i+step] = xs[i+step] * xs[i];
+	//}
+
+	//vector<Matrix> prefixed = recursiveSolvePrefix(products);
+	//vector<Matrix> result;
+	//result.push_back(xs[0]);
+	//result.push_back(prefixed[0]);
+	//for (int i=1; i<prefixed.size(); i++) {
+	//	result.push_back(xs[2 * i] * prefixed[i - 1]);
+	//	result.push_back(prefixed[i]);
+	//}
+
+	return xs;
+
+	
+}
 
 vector<Matrix> solveZsPrefix(vector<SplitMatrix> MHs, vector<SplitMatrix> UVs) {
 	vector<Matrix> continComponents = assemblePrefixComponents(MHs, UVs);
@@ -369,7 +412,7 @@ Matrix solveXs(vector<Matrix> &ls, vector<Matrix> &bis, vector<Matrix> &ans, vec
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	int numProc = 16;
+	int numProc = 4;
 	int blockSize = 5;
 	int mtxSize = numProc * blockSize;
 	Matrix coefs = Matrix(mtxSize, mtxSize);
