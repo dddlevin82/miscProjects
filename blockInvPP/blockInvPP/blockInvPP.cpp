@@ -5,6 +5,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <windows.h> 
+#include <WinBase.h>
 #include <tchar.h>
 #include <strsafe.h>
 #define numProc 8
@@ -141,6 +142,29 @@ DWORD WINAPI climbUp(LPVOID lpParam) {
 }
 
 
+vector<Matrix> solvePrefixSerial(vector<Matrix> &xs) {
+
+    int n = xs.size();
+    int numLevels = (int) (log((double) xs.size()) / log(2.) + .5); 
+    for (int i=0; i<numLevels; i++) {
+        int stepSize = (unsigned int) pow(2., i + 1);
+        int lookForward = (unsigned int) pow(2., i);
+        int start = pow(2., i) - 1;
+        for (int j=start; j<xs.size(); j+=stepSize) {
+            xs[j+lookForward] = xs[j+lookForward] * xs[j];
+        }
+    }
+
+    for (int k = (unsigned int) pow(2.,n-1.); k>0; k/=2) {
+        for (int i=k-1; i<n-1; i+=k) {
+            xs[i+k] = xs[i+k] * xs[i];
+        }
+    }
+        return xs;
+}
+
+
+
 vector<Matrix> solvePrefix(vector<Matrix> &xs) {
 	const int numThreads = numProc / 2;
     int n = xs.size();
@@ -190,14 +214,23 @@ vector<Matrix> solvePrefix(vector<Matrix> &xs) {
 	return xs;
 }
 
-vector<Matrix> solveZsPrefix(vector<SplitMatrix> MHs, vector<SplitMatrix> UVs) {
+vector<Matrix> solveZsPrefix(vector<SplitMatrix> MHs, vector<SplitMatrix> UVs, vector<Matrix> (*pfxFunc)(vector<Matrix>&)) {
 	vector<Matrix> continComponents = assemblePrefixComponents(MHs, UVs);
-	vector<Matrix> prefixes = solvePrefix(continComponents);
+	vector<Matrix> prefixes = pfxFunc(continComponents);
 	vector<Matrix> zs;
 	for (int i=0; i<prefixes.size(); i++) {
 		zs.push_back(prefixes[i].sliceBlock(0, prefixes[0].rows[0].size()-1, prefixes[0].rows.size() - 1, 1));
 	}
 	return zs;
+}
+
+vector<Matrix> solveYsSerial(vector<SplitMatrix> &UVs, vector<SplitMatrix> &MHs, vector<Matrix> &zs) {
+        vector<Matrix> ys;
+        ys.push_back(UVs[0].top);
+        for (int i=1; i<UVs.size(); i++) {
+                ys.push_back(UVs[i].top - MHs[i-1].top * zs[i-1]);
+        }
+        return ys;
 }
 
 DWORD WINAPI firstY (LPVOID lpParam) {
@@ -259,37 +292,82 @@ Matrix assembleXs(vector<Matrix> &ys, vector<Matrix> &zs) {
 	return xs;
 }
 
-Matrix solveXs(vector<Matrix> &ls, vector<Matrix> &bis, vector<Matrix> &ans, vector<Matrix> &gs, int bandwidth) {
+Matrix solveXs(vector<Matrix> &ls, vector<Matrix> &bis, vector<Matrix> &ans, vector<Matrix> &gs, int bandwidth, vector<Matrix> (*pfxFunc)(vector<Matrix>&), vector<Matrix>(*ysFunc)(vector<SplitMatrix> &, vector<SplitMatrix> &, vector<Matrix> &)) {
 	int blockSize = ls[0].rows.size();
 	vector<Matrix> gHats = makeGHats(gs, blockSize, bandwidth);
 	vector<SplitMatrix> MHs = splitByBand(gHats, blockSize, bandwidth);
 	vector<SplitMatrix> UVs = splitByBand(bis, blockSize, bandwidth);
-	vector<Matrix> zs = solveZsPrefix(MHs, UVs);
+	vector<Matrix> zs = solveZsPrefix(MHs, UVs, pfxFunc);
     
-	vector<Matrix> ys = solveYs(UVs, MHs, zs);
+	vector<Matrix> ys = ysFunc(UVs, MHs, zs);
 	Matrix xs = assembleXs(ys, zs);
 	return xs;
 }
-
-
-int main(int argc, char *argv[])
-{
-
-	int blockSize = 30;
-	int mtxSize = numProc * blockSize;
+int getTime() {
+	SYSTEMTIME time;
+	GetSystemTime(&time);
+	return 60000 * time.wMinute + 1000 * time.wSecond + time.wMilliseconds;
+}
+Matrix makeCoefs(int mtxSize) {
 	Matrix coefs = Matrix(mtxSize, mtxSize);
 	coefs.populateDiagonal(0, 0, 1);
 	coefs.populateDiagonal(1, 0, -1);
-	//coefs.populateDiagonal(2, 0, -2);
+	return coefs;
+}
+
+int timeSolveFS(int mtxSize) {
+	int blockSize = mtxSize / numProc;
+	Matrix coefs = makeCoefs(mtxSize);
+	Matrix ans = Matrix(mtxSize, 1);
+	ans.populateCol(0, 1);
+	int timeBefore = getTime();
+	Matrix xs = forwardSub(coefs, ans);
+	int dt = getTime() - timeBefore;
+	return dt;
+
+}
+int timeSolvePP(int mtxSize, vector<Matrix> (*pfxFunc)(vector<Matrix>&), vector<Matrix>(*ysFunc)(vector<SplitMatrix> &, vector<SplitMatrix> &, vector<Matrix> &)) {
+
+	int blockSize = mtxSize / numProc;
+	Matrix coefs = makeCoefs(mtxSize);
+	Matrix ans = Matrix(mtxSize, 1);
+	ans.populateCol(0, 1);
+	int timeBefore = getTime();
 	vector<Matrix> rs = sliceRs(coefs, blockSize);
 	vector<Matrix> ls = sliceLs(coefs, blockSize);
 	vector<Matrix> gs = calcGs(rs, ls);
 	int bandwidth = 2;
-	Matrix ans = Matrix(mtxSize, 1);
-	ans.populateCol(0, 1);
+
 	vector<Matrix> ansBlocks = ans.asRowBlocks(blockSize);
 	vector<Matrix> bis = calcBis(ls, ansBlocks);
-	Matrix xs = solveXs(ls, bis, ansBlocks, gs, bandwidth);
+	Matrix xs = solveXs(ls, bis, ansBlocks, gs, bandwidth, pfxFunc, ysFunc);
+	int dt = getTime() - timeBefore;
+	return dt;
+}
+
+int main(int argc, char *argv[])
+{
+	const int numSteps = 10;
+	int timesPPP[numSteps];
+	int timesFS[numSteps];
+	int timesPPS[numSteps];
+	int sizes[numSteps];
+	int matrixSize = 32;
+	vector<Matrix> (*pfxSerial)(vector<Matrix>&) = solvePrefixSerial;
+	vector<Matrix> (*pfxPar)(vector<Matrix>&) = solvePrefix;
+
+	vector<Matrix> (*ysSerial)(vector<SplitMatrix> &, vector<SplitMatrix> &, vector<Matrix> &) = solveYsSerial;
+	vector<Matrix> (*ysPar)(vector<SplitMatrix> &, vector<SplitMatrix> &, vector<Matrix> &) = solveYs;
+	for (int i=0; i<sizeof(timesPPP)/sizeof(int); i++) {
+		timesPPS[i] = timeSolvePP(matrixSize, pfxSerial, ysSerial);
+		timesPPP[i] = timeSolvePP(matrixSize, pfxSerial, ysSerial);
+		timesFS[i] = timeSolveFS(matrixSize);
+
+		sizes[i] = matrixSize;
+		matrixSize *= 2;
+	}
+
+	
 	return 0;
 }
 
