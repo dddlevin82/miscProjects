@@ -16,6 +16,14 @@ struct ClimbParam {
 	int k;
 };
 
+struct SolveYParam {
+	vector<SplitMatrix> *UVs;
+	vector<SplitMatrix> *MHs;
+	vector<Matrix> *zs;
+	vector<Matrix> *ys;
+	int i;
+};
+
 Matrix forwardSubCol(Matrix &coefs, Matrix &eqls) {
 	Matrix xs = Matrix(eqls.rows.size(), 1);
 	for (int y=0; y<coefs.rows.size(); y++) {
@@ -128,7 +136,6 @@ DWORD WINAPI climbUp(LPVOID lpParam) {
 	ClimbParam param = *((ClimbParam*) lpParam);
 	if (param.i + param.k < param.pfxs->size()) {
 		(*param.pfxs)[param.i+param.k] = param.pfxs->at(param.i+param.k) * param.pfxs->at(param.i); 
-		printf("multiplying %d and %d \n", param.i + param.k, param.i);
 	}
 	return 0;
 }
@@ -163,58 +170,13 @@ vector<Matrix> solvePrefix(vector<Matrix> &xs) {
 			CloseHandle(threadHandles[i]);
 		}
 	}
-		/*
-		for (
-	HANDLE handleThread1 = CreateThread(NULL, 0, myFunc, &p, 0, NULL);
-	HANDLE arrayOfHandles[1];
-	arrayOfHandles[0] = handleThread1;
-	WaitForMultipleObjects(1, arrayOfHandles, TRUE, INFINITE);
-	printf("fin");
-	CloseHandle(arrayOfHandles[0]);
-	*/
-
-       // for (int j=start; j<xs.size(); j+=stepSize) {
-       //     xs[j+lookForward] = xs[j+lookForward] * xs[j];
-      //  }
-   
-	printf("BING");	
-
-	
-	for (int k=xs.size()/2; k>1; k/=2) {
-		for (int i=k-1; i+k<xs.size(); i+=k) {
-			printf("setting %d\n", i + (k+1)/2);
-			xs[i + (k+1)/2] = xs[i + (k+1)/2] * xs[i];
-		}
-	}
-	
-	/*
-	for (int k=xs.size()/2; k>0; k/=2) {
-		for (int i=k-1; i<xs.size(); i+=k) {
-			int setting = i + (k+1)/2;
-			xs[i + (k+1)/2] = xs[i + (k+1)/2] * xs[i];
-		}
-		
-
-	}
-	*/
-	/*
-    for (int k = xs.size() / 2; k>0; k/=2) {
-        for (int i=k-1; i<n-1; i+=k) {
-			printf("multiplying %d and %d\n", i, i+k);
-            xs[i+k] = xs[i+k] * xs[i];
-        }
-    }
-	*/
-	/*
-
-
-    for (int k = xs.size() / 2; k>0; k/=2) {
+    for (int k = xs.size()/2; k>1; k/=2) {
 		HANDLE threadHandles[numThreads];
 		ClimbParam params[numThreads];
 		for (int t=0, i=k-1; t<sizeof(threadHandles) / sizeof(int); t++, i+=k) {
 			ClimbParam next;
 			next.i = i;
-			next.k = k;
+			next.k = (k + 1) / 2;
 			next.pfxs = &xs;
 			params[t] = next;
 			HANDLE nextHandle = CreateThread(NULL, 0, climbUp, &params[t], 0, NULL);
@@ -224,44 +186,62 @@ vector<Matrix> solvePrefix(vector<Matrix> &xs) {
 		for (int i=0; i<sizeof(threadHandles) / sizeof(int); i++) {
 			CloseHandle(threadHandles[i]);
 		}
-
-		
-    }
-	*/
-
+	}
 	return xs;
 }
 
 vector<Matrix> solveZsPrefix(vector<SplitMatrix> MHs, vector<SplitMatrix> UVs) {
 	vector<Matrix> continComponents = assemblePrefixComponents(MHs, UVs);
 	vector<Matrix> prefixes = solvePrefix(continComponents);
-
-
-
-	vector<Matrix> hProds;
-	Matrix first = Matrix(UVs[0].bottom.rows.size() + 1, MHs[0].bottom.rows[0].size() + UVs[0].bottom.rows[0].size());
-	first.populateCol(first.rows[0].size() - 1, 1);
-	first.pasteIn(UVs[0].bottom, 0, MHs[0].bottom.rows[0].size());
-	hProds.push_back(first);
-	for (int i=0; i<MHs.size(); i++) {
-		Matrix hNew = Matrix(UVs[0].bottom.rows.size() + 1, MHs[0].bottom.rows[0].size() + UVs[0].bottom.rows[0].size());
-		hNew.populateCol(hNew.rows[0].size() - 1, 1);
-		hNew.pasteIn(MHs[i].bottom * -1, 0, 0);
-		hNew.pasteIn(UVs[i + 1].bottom, 0, MHs[0].bottom.rows[0].size());
-		for (int j=hProds.size() - 1; j>=0; j--) {
-			hNew = hNew * hProds[j];
-		}
-		hProds.push_back(hNew);
+	vector<Matrix> zs;
+	for (int i=0; i<prefixes.size(); i++) {
+		zs.push_back(prefixes[i].sliceBlock(0, prefixes[0].rows[0].size()-1, prefixes[0].rows.size() - 1, 1));
 	}
-	vector<Matrix> foo;
-	return foo;
+	return zs;
+}
+
+DWORD WINAPI firstY (LPVOID lpParam) {
+	SolveYParam first = *((SolveYParam*) lpParam);
+	(*first.ys)[0] = (*first.UVs)[0].top;
+	return 0;
+}
+
+DWORD WINAPI restYs (LPVOID lpParam) {
+	SolveYParam param = *((SolveYParam*) lpParam);
+	(*param.ys)[param.i] = (*param.UVs)[param.i].top - (*param.MHs)[param.i-1].top * (*param.zs)[param.i-1];
+	return 0;
 }
 
 vector<Matrix> solveYs(vector<SplitMatrix> &UVs, vector<SplitMatrix> &MHs, vector<Matrix> &zs) {
 	vector<Matrix> ys;
-	ys.push_back(UVs[0].top);
+	ys.reserve(zs.size());
+	for (int i=0; i<UVs.size(); i++) {
+		ys.push_back(Matrix(0, 0));
+	}
+	
+	//ys.push_back(UVs[0].top);
+	HANDLE yHandles[numProc];
+	SolveYParam params[numProc];
+	SolveYParam firstParam;
+	firstParam.i = 0;
+	firstParam.UVs = &UVs;
+	firstParam.ys = &ys;
+	params[0] = firstParam;
+	yHandles[0] = CreateThread(NULL, 0, firstY, &params[0], 0, NULL);
 	for (int i=1; i<UVs.size(); i++) {
+		SolveYParam next;
+		next.i = i;
+		next.ys = &ys;
+		next.UVs = &UVs;
+		next.MHs = &MHs;
+		next.zs = &zs;
+		params[i] = next;
+		yHandles[i] = CreateThread(NULL, 0, restYs, &params[i], 0, NULL);
 		//ys.push_back(UVs[i].top - MHs[i-1].top * zs[i-1]);
+	}
+	WaitForMultipleObjects(numProc, yHandles, TRUE, INFINITE);
+	for (int i=0; i<sizeof(yHandles) / sizeof(int); i++) {
+		CloseHandle(yHandles[i]);
 	}
 	return ys;
 }
@@ -272,9 +252,9 @@ Matrix solveXs(vector<Matrix> &ls, vector<Matrix> &bis, vector<Matrix> &ans, vec
 	vector<SplitMatrix> MHs = splitByBand(gHats, blockSize, bandwidth);
 	vector<SplitMatrix> UVs = splitByBand(bis, blockSize, bandwidth);
 	vector<Matrix> zs = solveZsPrefix(MHs, UVs);
-    /*
-	//vector<Matrix> zs = solveZsBlockInv(UVs, MHs);
+    
 	vector<Matrix> ys = solveYs(UVs, MHs, zs);
+	/*
 	Matrix xs = Matrix(zs.size() * zs[0].rows.size() + ys.size() * ys[0].rows.size(), 1);
 	int index = 0;
 	for (int i=0; i<zs.size(); i++) {
