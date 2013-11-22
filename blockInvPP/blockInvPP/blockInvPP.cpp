@@ -7,16 +7,13 @@
 #include <windows.h> 
 #include <tchar.h>
 #include <strsafe.h>
-#define numProc 8
+#define numProc 16
 using namespace std;
 
-struct ClimbUpParam {
+struct ClimbParam {
 	vector<Matrix> *pfxs;
-	int stepSize;
-	int lookForward;
-	int start;
-	int end;
-
+	int i;
+	int k;
 };
 
 Matrix forwardSubCol(Matrix &coefs, Matrix &eqls) {
@@ -128,37 +125,34 @@ vector<Matrix> assemblePrefixComponents(vector<SplitMatrix> &MHs, vector<SplitMa
 }
 
 DWORD WINAPI climbUp(LPVOID lpParam) {
-	ClimbUpParam param = *((ClimbUpParam*) lpParam);
-	for (int j=param.start; j<param.end && j<param.pfxs->size(); j+=param.stepSize) {
-		(*param.pfxs)[j+param.lookForward] = param.pfxs->at(j+param.lookForward) * param.pfxs->at(j); 
+	ClimbParam param = *((ClimbParam*) lpParam);
+	if (param.i + param.k < param.pfxs->size()) {
+		(*param.pfxs)[param.i+param.k] = param.pfxs->at(param.i+param.k) * param.pfxs->at(param.i); 
+		printf("multiplying %d and %d \n", param.i + param.k, param.i);
 	}
 	return 0;
 }
 
-vector<Matrix> solvePrefix(vector<Matrix> &xs) {
 
+vector<Matrix> solvePrefix(vector<Matrix> &xs) {
+	const int numThreads = numProc / 2;
     int n = xs.size();
     int numLevels = (int) (log((double) xs.size()) / log(2.) + .5); 
     for (int i=0; i<numLevels; i++) {
         int stepSize = (unsigned int) pow(2., i + 1);
         int lookForward = (unsigned int) pow(2., i);
         int start = pow(2., i) - 1;
-		int numSteps = (xs.size() - start) / stepSize;
-		const int numThreads = numProc / 2;
+		int numSteps = (n - start) / stepSize;
+
 		HANDLE threadHandles[numThreads];
-		ClimbUpParam upParams[numThreads];
+		ClimbParam upParams[numThreads];
 		int threadStart = start;
-		//printf("size %d start %d\n", xs.size(), start);
-		//int threadSpan = xs.size() / stepSize;
-		//printf("thread span %d\n", threadSpan);
-		ClimbUpParam params[numThreads];
+		ClimbParam params[numThreads];
 		for (int i=0; i<sizeof(threadHandles) / sizeof(int); i++) {
-			ClimbUpParam next;
-			next.start = threadStart;
-			next.lookForward = lookForward;
-			next.end = threadStart + stepSize;
+			ClimbParam next;
+			next.i = threadStart;
+			next.k = lookForward;
 			next.pfxs = &xs;
-			next.stepSize = stepSize;
 			params[i] = next;
 			threadStart += stepSize;
 			HANDLE nextHandle = CreateThread(NULL, 0, climbUp, &params[i], 0, NULL);
@@ -168,6 +162,7 @@ vector<Matrix> solvePrefix(vector<Matrix> &xs) {
 		for (int i=0; i<sizeof(threadHandles) / sizeof(int); i++) {
 			CloseHandle(threadHandles[i]);
 		}
+	}
 		/*
 		for (
 	HANDLE handleThread1 = CreateThread(NULL, 0, myFunc, &p, 0, NULL);
@@ -181,13 +176,58 @@ vector<Matrix> solvePrefix(vector<Matrix> &xs) {
        // for (int j=start; j<xs.size(); j+=stepSize) {
        //     xs[j+lookForward] = xs[j+lookForward] * xs[j];
       //  }
-    }
+   
+	printf("BING");	
 
-    for (int k = (unsigned int) pow(2.,n-1.); k>0; k/=2) {
+	
+	for (int k=xs.size()/2; k>1; k/=2) {
+		for (int i=k-1; i+k<xs.size(); i+=k) {
+			printf("setting %d\n", i + (k+1)/2);
+			xs[i + (k+1)/2] = xs[i + (k+1)/2] * xs[i];
+		}
+	}
+	
+	/*
+	for (int k=xs.size()/2; k>0; k/=2) {
+		for (int i=k-1; i<xs.size(); i+=k) {
+			int setting = i + (k+1)/2;
+			xs[i + (k+1)/2] = xs[i + (k+1)/2] * xs[i];
+		}
+		
+
+	}
+	*/
+	/*
+    for (int k = xs.size() / 2; k>0; k/=2) {
         for (int i=k-1; i<n-1; i+=k) {
+			printf("multiplying %d and %d\n", i, i+k);
             xs[i+k] = xs[i+k] * xs[i];
         }
     }
+	*/
+	/*
+
+
+    for (int k = xs.size() / 2; k>0; k/=2) {
+		HANDLE threadHandles[numThreads];
+		ClimbParam params[numThreads];
+		for (int t=0, i=k-1; t<sizeof(threadHandles) / sizeof(int); t++, i+=k) {
+			ClimbParam next;
+			next.i = i;
+			next.k = k;
+			next.pfxs = &xs;
+			params[t] = next;
+			HANDLE nextHandle = CreateThread(NULL, 0, climbUp, &params[t], 0, NULL);
+			threadHandles[t] = nextHandle;
+		}
+		WaitForMultipleObjects(numThreads, threadHandles, TRUE, INFINITE);
+		for (int i=0; i<sizeof(threadHandles) / sizeof(int); i++) {
+			CloseHandle(threadHandles[i]);
+		}
+
+		
+    }
+	*/
 
 	return xs;
 }
