@@ -27,6 +27,7 @@ class Matrix {
 	Matrix operator- (Matrix m);
 	Matrix operator* (Matrix &m);
 	Matrix operator* (double x);
+	void   operator*=(Matrix &m);
 };
 
 class SplitMatrix {

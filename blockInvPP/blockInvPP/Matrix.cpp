@@ -180,3 +180,22 @@ Matrix Matrix::operator* (double x)
 }
 
 
+void Matrix::operator*= (Matrix &m) 
+{
+	Matrix res = Matrix(rows.size(), m.rows[0].size());
+
+	for (int y=0; y<res.rows.size(); y++) {
+		for (int x=0; x<res.rows[0].size(); x++) {
+			double sum = 0;
+			for (int my=0; my<m.rows.size(); my++) {
+				sum += m.rows[my][x] * rows[y][my];
+			}
+			res.rows[y][x] = sum;
+		}
+	}
+	for (int y=0; y<res.rows.size(); y++) {
+		for (int x=0; x<res.rows[0].size(); x++) {
+			rows[y][x] = res.rows[y][x];
+		}
+	}
+}
