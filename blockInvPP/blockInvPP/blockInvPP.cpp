@@ -8,7 +8,7 @@
 #include <WinBase.h>
 #include <tchar.h>
 #include <strsafe.h>
-#define numProc 4
+#define numProc 8
 using namespace std;
 
 struct ClimbParam {
@@ -23,6 +23,13 @@ struct SolveYParam {
 	SplitMatrix **MHs;
 	Matrix **zs;
 	Matrix **ys;
+	int i;
+};
+
+struct CalcGsParam {
+	Matrix **gs;
+	Matrix **ls;
+	Matrix **rs;
 	int i;
 };
 
@@ -61,7 +68,7 @@ void sliceLs(Matrix *ls, Matrix coefs, int blockSize) {
 	for (int i=0; i<(int)coefs.rows.size() / blockSize; i++) {
 		ls[i] = coefs.sliceBlock(i * blockSize, i * blockSize, blockSize, blockSize);
 	}
-	printf("Spent %d in sliceLs\n", getTime() - timeBefore);
+	//printf("Spent %d in sliceLs\n", getTime() - timeBefore);
 }
 
 void sliceRs(Matrix *rs, Matrix coefs, int blockSize) {
@@ -69,16 +76,33 @@ void sliceRs(Matrix *rs, Matrix coefs, int blockSize) {
 	for (int i=1; i<(int)coefs.rows.size() / blockSize; i++) {
 		rs[i-1] = coefs.sliceBlock(i * blockSize, (i - 1) * blockSize, blockSize, blockSize);
 	}
-	printf("Spent %d in sliceRs\n", getTime() - timeBefore);
+	//printf("Spent %d in sliceRs\n", getTime() - timeBefore);
 
+}
+
+DWORD WINAPI calcGsBlock(LPVOID lpParam) {
+	CalcGsParam param = (*(CalcGsParam*)lpParam);
+	(*param.gs)[param.i] = forwardSub((*param.ls)[param.i+1], (*param.rs)[param.i]);
+	return 0;
 }
 
 void calcGs(Matrix *gs, Matrix *rs, Matrix *ls, int ii) {
 	int timeBefore = getTime();
-	for (int i=0; i<ii; i++) {
-		gs[i] = forwardSub(ls[i+1], rs[i]);
+	CalcGsParam gsParams[numProc-1];
+	HANDLE threadHandles[numProc-1];
+	for (int i=0; i<numProc-1; i++) {
+		CalcGsParam next;
+		next.i = i;
+		next.ls = &ls;
+		next.rs = &rs;
+		next.gs = &gs;
+		gsParams[i] = next;
+		HANDLE nextHandle = CreateThread(NULL, 0, calcGsBlock, &gsParams[i], 0, NULL);
+		threadHandles[i] = nextHandle;
 	}
-	printf("Spend %d in sliceGs\n", getTime() - timeBefore);
+	WaitForMultipleObjects(numProc-1, threadHandles, TRUE, INFINITE);
+
+	//printf("Spend %d in sliceGs\n", getTime() - timeBefore);
 
 
 }
@@ -88,7 +112,7 @@ void calcBis(Matrix *bis, Matrix *ls, vector<Matrix> &ansBlocks) {
 	for (int i=0; i<ansBlocks.size(); i++) {
 		bis[i] = forwardSub(ls[i], ansBlocks[i]);
 	}
-	printf("Spent %d in sliceB\n", getTime() - timeBefore);
+	//printf("Spent %d in sliceB\n", getTime() - timeBefore);
 
 }
 
@@ -106,7 +130,7 @@ void makeGHats(Matrix *gHats, Matrix *gs, int gsSize, int blockSize, int bandwid
 		}
 		gHats[i] = gHat;
 	}
-	printf("Spent %d in slicegHats\n", getTime() - timeBefore);
+	//printf("Spent %d in slicegHats\n", getTime() - timeBefore);
 }
 
 void splitByBand(SplitMatrix *split, Matrix *mtx, int mtxSize, int blockSize, int bandwidth) {
@@ -117,7 +141,7 @@ void splitByBand(SplitMatrix *split, Matrix *mtx, int mtxSize, int blockSize, in
         Matrix bot = mtx[i].sliceRows(blockSize - bandwidth, blockSize);
 		split[i] = SplitMatrix(top, bot); 
 	}
-	printf("Spent %d in splitByBand\n", getTime() - timeBefore);
+	//printf("Spent %d in splitByBand\n", getTime() - timeBefore);
 }
 
 vector<Matrix> solveZsBlockInv(vector<SplitMatrix> &UVs, vector<SplitMatrix> &MHs) {
@@ -237,14 +261,6 @@ void solveZsPrefix(Matrix *zs, SplitMatrix *MHs, int sizeMHs, SplitMatrix *UVs, 
 	}
 }
 
-vector<Matrix> solveYsSerial(vector<SplitMatrix> &UVs, vector<SplitMatrix> &MHs, vector<Matrix> &zs) {
-        vector<Matrix> ys;
-        ys.push_back(UVs[0].top);
-        for (int i=1; i<UVs.size(); i++) {
-                ys.push_back(UVs[i].top - MHs[i-1].top * zs[i-1]);
-        }
-        return ys;
-}
 
 DWORD WINAPI firstY (LPVOID lpParam) {
 	SolveYParam first = *((SolveYParam*) lpParam);
@@ -316,7 +332,7 @@ Matrix solveXs(Matrix *ls, Matrix *bis, vector<Matrix> &ans, Matrix *gs, int ban
     
 	ysFunc(ys, UVs, sizeof(UVs)/sizeof(SplitMatrix), MHs, zs);
 	Matrix xs = assembleXs(ys, zs, numProc);
-	printf("solving Xs for %d ms\n", getTime() - timeBefore);
+	//printf("solving Xs for %d ms\n", getTime() - timeBefore);
 	return xs;
 }
 
@@ -369,22 +385,19 @@ int timeSolvePP(int mtxSize, void (*pfxFunc)(Matrix *, int), void (*ysFunc)(Matr
 
 int main(int argc, char *argv[])
 {
-	const int numSteps = 1;
+	const int numSteps = 6;
 	int timesPPP[numSteps];
-	//int timesFS[numSteps];
-	int timesPPS[numSteps];
+	int timesFS[numSteps];
 	int sizes[numSteps];
-	int matrixSize = pow(2., 4);
-	vector<Matrix> (*pfxSerial)(vector<Matrix>&) = solvePrefixSerial;
+	int matrixSize = pow(2., 5);
 	void (*pfxPar)(Matrix *, int) = solvePrefix;
 
-	vector<Matrix> (*ysSerial)(vector<SplitMatrix> &, vector<SplitMatrix> &, vector<Matrix> &) = solveYsSerial;
 	void (*ysPar)(Matrix *, SplitMatrix *, int, SplitMatrix *, Matrix *) = solveYs;
 	for (int i=0; i<sizeof(timesPPP)/sizeof(int); i++) {
 		//timesPPS[i] = timeSolvePP(matrixSize, pfxSerial, ysSerial);
-		printf("bing");
+		printf("bing\n");
 		timesPPP[i] = timeSolvePP(matrixSize, pfxPar, ysPar);
-		//timesFS[i] = timeSolveFS(matrixSize);
+		timesFS[i] = timeSolveFS(matrixSize);
 
 		sizes[i] = matrixSize;
 		matrixSize *= 2;
