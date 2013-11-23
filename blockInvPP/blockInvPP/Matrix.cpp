@@ -4,6 +4,7 @@
 /* constructor */
 Matrix::Matrix(int nRow, int nCol) 
 {
+	rows.reserve(nRow);
 	for (int y=0; y<nRow; y++) {
 		vector<double> row;
 		row.reserve(nCol);
