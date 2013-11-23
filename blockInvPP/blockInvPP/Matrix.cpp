@@ -13,12 +13,18 @@ Matrix::Matrix(int nRow, int nCol)
 		rows.push_back(row);
 	}
 }
+Matrix::Matrix() {
+
+}
 
 SplitMatrix::SplitMatrix(Matrix &top_, Matrix &bottom_) 
   : top(top_), bottom(bottom_) 
 {
 	this->top = top;
 	this->bottom = bottom;
+}
+SplitMatrix::SplitMatrix() {
+
 }
 
 /************************************************************************/

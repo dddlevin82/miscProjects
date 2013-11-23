@@ -7,7 +7,7 @@ class Matrix {
 	vector<vector<double>> rows;
 	
     Matrix(int nRow, int nCol);
-	
+	Matrix();
 	void populateRow(int row, double val);
 	void populateCol(int col, double val);
     void populateDiagonal(int row, int col, double val); 
@@ -33,6 +33,7 @@ class Matrix {
 class SplitMatrix {
   public:
 	SplitMatrix(Matrix &top_, Matrix &bottom_);
+	SplitMatrix();
 	Matrix top;
 	Matrix bottom;
 };
