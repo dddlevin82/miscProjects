@@ -8,9 +8,9 @@
 #include <WinBase.h>
 #include <tchar.h>
 #include <strsafe.h>
-#define numProc 4
+#define numProc 8
 using namespace std;
-
+#include <map>
 struct ClimbParam {
 	Matrix **pfxs;
 	int xsSize;
@@ -117,6 +117,15 @@ void calcBis(Matrix *bis, Matrix *ls, vector<Matrix> &ansBlocks) {
 }
 
 void makeGHats(Matrix *gHats, Matrix *gs, int gsSize, int blockSize, int bandwidth) {
+	map<int, double> foo;
+	foo.insert(make_pair<int, double>(3, 4.3));
+	map<int, double>::iterator it;
+	pair<int, double> blah;
+	it = foo.find(3->);
+	foo = foo[3];
+	double foo = it._Ptr->_Myval.second;
+	map<int, double>::const_iterator p = foo.find(3);
+	
 	int timeBefore = getTime();
 
 	int firstZero = blockSize - bandwidth;
