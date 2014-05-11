@@ -15,25 +15,17 @@ def to2d(flat, nr, nc):
 	return np.array(img2d, np.float64)
 
 def toIntIntensity(as2d):
-	intens = np.zeros(as2d.shape, np.float64)
-	for i in range(as2d.shape[1]):
-		intens[0][i] = np.sum(as2d[0][0:i+1])
-	for i in range(as2d.shape[0]):
-		summ = 0.
-		for j in range(i+1):
-			summ += as2d[j][0]
-		intens[i][0] = summ #doing edges first
-
-	for nRow in range(1, intens.shape[0]):
-		sumCol = as2d[nRow][0]
-		for nCol in range(1, intens.shape[1]):
+	intense = np.zeros((as2d.shape[0] + 1, as2d.shape[1] + 1), np.float64)
+	#intense has bordering row, col, of zeros
+	for nRow in range(0, as2d.shape[0]):
+		sumCol = 0
+		for nCol in range(0, as2d.shape[1]):
 			sumCol += as2d[nRow][nCol]
-			intens[nRow][nCol] = intens[nRow-1][nCol] + sumCol
-	return intens
+			intense[nRow+1][nCol+1] = intense[nRow][nCol+1] + sumCol
+	return intense
 
 def loadImages(folder, n):
 	fns = os.listdir(folder)[:n]
-	greys = []
 	npImgs = []
 	for f in fns:
 		img = Image.open(folder + f)
@@ -41,9 +33,48 @@ def loadImages(folder, n):
 		flatRGB = np.array(img.getdata())
 		flatGreyscale = toGreyscale(flatRGB)
 		as2d = to2d(flatGreyscale, nr, nc)
-		greys.append(as2d)
 		npImgs.append(toIntIntensity(as2d))
-	return [npImgs, greys]
+	return npImgs
+class Learner:
+	def __init__(haar, p, cut, pos, trace):
+		self.haar = haar
+		self.p = p
+		self.cut = cut
+		self.pos = pos #in index values
+		self.trace = trace #also in index values
+	def eval(img, rmin, rmax, cmin, cmax):
+		return int(self.p * self.haar(img, rmin, rmax, cmin, cmax) < self.p * self.cut)
+
+
+def getIntense(img, rmin, rmax, cmin, cmax):
+	return img[rmax][cmax] - img[rmin][cmax] - img[rmax][cmin] + img[rmin][cmin]
+
+def haarTwoRecHorix(img, rmin, rmax, cmin, cmax):
+	rcut = int(round((rmin + rmax) / 2.))
+	iA = getIntense(img, rcut, rmax, cmin, cmax)
+	iB = getIntense(img, rmin, rcut, cmin, cmax)
+	return iA - iB
+
+
+def haarTwoRecHoriz(img, rmin, rmax, cmin, cmax):
+	ccut = int(round((cim + cmax) / 2.))
+	iA = getIntense(img, rmin, rmax, ccut, cmax)
+	iB = getIntense(img, rmin, rmax, cmin, ccut)
+	return iA - iB
+
 
 imgs = loadImages('faces/', 1)
+'''
+a = imgs[0][0]
+b = imgs[1][0]
+rr = 40
+cc = 30
+s = 0.
+for r in range(rr):
+	for c in range(cc):
+		s += b[r][c]
+print s
+print a[rr][cc]
 
+
+'''
