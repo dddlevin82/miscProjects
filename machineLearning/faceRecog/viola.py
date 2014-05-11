@@ -35,33 +35,73 @@ def loadImages(folder, n):
 		as2d = to2d(flatGreyscale, nr, nc)
 		npImgs.append(toIntIntensity(as2d))
 	return npImgs
-class Learner:
-	def __init__(haar, p, cut, pos, trace):
+class WeakLearner:
+	def __init__(haar, p, cut, rmin, rmax, cmin, cmax):
+
 		self.haar = haar
 		self.p = p
 		self.cut = cut
-		self.pos = pos #in index values
-		self.trace = trace #also in index values
-	def eval(img, rmin, rmax, cmin, cmax):
-		return int(self.p * self.haar(img, rmin, rmax, cmin, cmax) < self.p * self.cut)
+		self.rmin = rmin
+		self.rmax = rmax
+		self.cmin = cmin
+		self.cmax = cmax
+	def eval(img):
+		shaper = img.shape[0]
+		shapec = img.shape[1]
+		rImin = int(round(shaper * rmin))
+		rIMax = int(round(shaper * rmax))
+		cIMin = int(round(shapec * cmin))
+		cIMax = int(round(shapec * cmax))
+		return int(self.p * self.haar(img, self.rmin, self.rmax, self.cmin, self.cmax) < self.p * self.cut)
 
 
 def getIntense(img, rmin, rmax, cmin, cmax):
 	return img[rmax][cmax] - img[rmin][cmax] - img[rmax][cmin] + img[rmin][cmin]
 
-def haarTwoRecHorix(img, rmin, rmax, cmin, cmax):
-	rcut = int(round((rmin + rmax) / 2.))
-	iA = getIntense(img, rcut, rmax, cmin, cmax)
-	iB = getIntense(img, rmin, rcut, cmin, cmax)
+
+#for each, do two rotations and both parities.  Except 4.  Only need one rotation and both parities for that. switching parity is equil to rotating
+
+def haarTwoHoriz(img, rmin, rmax, cmin, cmax, rImin, rImax, cImin, cImax):
+	rcut = int(round(img.shape[0] * (rmin + rmax) / 2.))
+	iA = getIntense(img, rcut, rImax, cImin, cImax)
+	iB = getIntense(img, rIMin, rcut, cImin, cImax)
 	return iA - iB
 
 
-def haarTwoRecHoriz(img, rmin, rmax, cmin, cmax):
-	ccut = int(round((cim + cmax) / 2.))
-	iA = getIntense(img, rmin, rmax, ccut, cmax)
-	iB = getIntense(img, rmin, rmax, cmin, ccut)
+def haarTwoVert(img, rmin, rmax, cmin, cmax):
+	ccut = int(round(img.shape[1] * (cmin + cmax) / 2.))
+	iA = getIntense(img, rIMin, rImax, ccut, cImax)
+	iB = getIntense(img, rIMin, rImax, cImin, ccut)
 	return iA - iB
 
+def haarThreeHoriz(img, rmin, rmax, cmin, cmax):
+	rcutLow = int(round(img.shape[0] * (rmin + rmax) / 3.))
+	rcutHigh = int(round(img.shape[0] * 2 * (rmin + rmax) / 3.))
+	iA = getIntense(img, rIMin, rcutLow, cImin, cImax)
+	iB = getIntense(img, rcutLow, rcutHigh, cImin, cImax)
+	iC = getIntense(img, rcutHigh, rImax, cImin, cImax)
+	return iB - iA - iC
+
+def haarThreeVert(img, rmin, rmax, cmin, cmax):
+	ccutLow = int(round(img.shape[1] * (cmin + cmax) / 3.))
+	ccutHigh = int(round(img.shape[1] * 2 * (cmin + cmax) / 3.))
+	iA = getIntense(img, rIMin, rImax, cImin, ccutLow)
+	iB = getIntense(img, rIMin, rImax, ccutLow, ccutHigh)
+	iC = getIntense(img, rIMin, rImax, ccutHigh, cImax)
+	return iB - iA - iC
+
+def haarFour(img, rmin, rmax, cmin, cmax):
+	rcut = int(round(img.shape[0] * (rmin + rmax) / 2.))
+	ccut = int(round(img.shape[1] * (cmin + cmax) / 2.))
+	iA = getIntense(img, rIMin, rcut, cImin, ccut)
+	iB = getIntense(img, rcut, rImax, cImin, ccut)
+	iC = getIntense(img, rIMin, rcut, ccut, cImax)
+	iD = getIntense(img, rcut, rImax, ccut, cImax)
+	return (iA + iD) - (iB + iB)
+
+#HEY - The learners will be paramatrized with positions being index values, then in production I'm going to convert them to fractional positions in the window since the window is variable
+def weaksWithDims(rmin, rmax, cmin, cmax, theta):
+	h2VertPPlus = WeakLearner(haarTwoVert,
 
 imgs = loadImages('faces/', 1)
 '''
