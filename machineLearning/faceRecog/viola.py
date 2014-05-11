@@ -3,16 +3,16 @@ import numpy as np
 import os
 # am using row, column notation like a normal person
 def toGreyscale(rgb):
-	greyscale = np.zero(len(rgb))
+	greyscale = np.zeros(len(rgb))
 	for i in range(len(rgb)):
-		greyscale[i] = .2989 * rgb[i][0] + .5870 * rgb[i][1] + .1140 * rgb[i][2] # see stackoverflow.com/question/687261/converting-rgb-to-grayscale-intensity.  has to do with human perception
+		greyscale[i] = .2989 * rgb[i][0] / 255 + .5870 * rgb[i][1] / 255 + .1140 * rgb[i][2] / 255 # see stackoverflow.com/question/687261/converting-rgb-to-grayscale-intensity.  has to do with human perception
 	return greyscale
 
 def to2d(flat, nr, nc):
-	2dImg = []
+	img2d = []
 	for i in range(len(flat) / nc):
-		2dImg.append(flat[nc*i : nc*(i+1)])
-	return np.array(2dImg, np.float64)
+		img2d.append(flat[nc*i : nc*(i+1)])
+	return np.array(img2d, np.float64)
 
 def toIntIntensity(as2d):
 	intens = np.zeros(as2d.shape, np.float64)
@@ -33,12 +33,17 @@ def toIntIntensity(as2d):
 
 def loadImages(folder, n):
 	fns = os.listdir(folder)[:n]
+	greys = []
 	npImgs = []
 	for f in fns:
-		img = Image(f)
+		img = Image.open(folder + f)
 		nc, nr = img.size
 		flatRGB = np.array(img.getdata())
 		flatGreyscale = toGreyscale(flatRGB)
-		as2d = to2d(flatGreyscale, nr, nc))
+		as2d = to2d(flatGreyscale, nr, nc)
+		greys.append(as2d)
 		npImgs.append(toIntIntensity(as2d))
+	return [npImgs, greys]
+
+imgs = loadImages('faces/', 1)
 
