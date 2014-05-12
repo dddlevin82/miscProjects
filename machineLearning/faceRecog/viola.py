@@ -49,32 +49,32 @@ class WeakLearner:
 		shaper = img.shape[0]
 		shapec = img.shape[1]
 		rImin = int(round(shaper * rmin))
-		rIMax = int(round(shaper * rmax))
-		cIMin = int(round(shapec * cmin))
-		cIMax = int(round(shapec * cmax))
-		return int(self.p * self.haar(img, self.rmin, self.rmax, self.cmin, self.cmax) < self.p * self.cut)
-
+		rImax = int(round(shaper * rmax))
+		cImin = int(round(shapec * cmin))
+		cImax = int(round(shapec * cmax))
+		normFact = (rImax - rImin) * (cImax - cImin)
+		return int(self.p * self.haar(img, self.rmin, self.rmax, self.cmin, self.cmax, rImin, rImax, cImin, cImax) / norm < self.p * self.cut)
 
 def getIntense(img, rmin, rmax, cmin, cmax):
 	return img[rmax][cmax] - img[rmin][cmax] - img[rmax][cmin] + img[rmin][cmin]
 
 
 #for each, do two rotations and both parities.  Except 4.  Only need one rotation and both parities for that. switching parity is equil to rotating
-
+#also, I would like not normalize by size window size, since otherwise a given theta would only apply at one dimension
 def haarTwoHoriz(img, rmin, rmax, cmin, cmax, rImin, rImax, cImin, cImax):
 	rcut = int(round(img.shape[0] * (rmin + rmax) / 2.))
 	iA = getIntense(img, rcut, rImax, cImin, cImax)
 	iB = getIntense(img, rIMin, rcut, cImin, cImax)
-	return iA - iB
+	return (iA - iB)
 
 
-def haarTwoVert(img, rmin, rmax, cmin, cmax):
+def haarTwoVert(img, rmin, rmax, cmin, cmax, rImin, rImax, cImin, cImax):
 	ccut = int(round(img.shape[1] * (cmin + cmax) / 2.))
 	iA = getIntense(img, rIMin, rImax, ccut, cImax)
 	iB = getIntense(img, rIMin, rImax, cImin, ccut)
 	return iA - iB
 
-def haarThreeHoriz(img, rmin, rmax, cmin, cmax):
+def haarThreeHoriz(img, rmin, rmax, cmin, cmax, rImin, rImax, cImin, cImax):
 	rcutLow = int(round(img.shape[0] * (rmin + rmax) / 3.))
 	rcutHigh = int(round(img.shape[0] * 2 * (rmin + rmax) / 3.))
 	iA = getIntense(img, rIMin, rcutLow, cImin, cImax)
@@ -82,7 +82,7 @@ def haarThreeHoriz(img, rmin, rmax, cmin, cmax):
 	iC = getIntense(img, rcutHigh, rImax, cImin, cImax)
 	return iB - iA - iC
 
-def haarThreeVert(img, rmin, rmax, cmin, cmax):
+def haarThreeVert(img, rmin, rmax, cmin, cmax, rImin, rImax, cImin, cImax):
 	ccutLow = int(round(img.shape[1] * (cmin + cmax) / 3.))
 	ccutHigh = int(round(img.shape[1] * 2 * (cmin + cmax) / 3.))
 	iA = getIntense(img, rIMin, rImax, cImin, ccutLow)
@@ -90,7 +90,7 @@ def haarThreeVert(img, rmin, rmax, cmin, cmax):
 	iC = getIntense(img, rIMin, rImax, ccutHigh, cImax)
 	return iB - iA - iC
 
-def haarFour(img, rmin, rmax, cmin, cmax):
+def haarFour(img, rmin, rmax, cmin, cmax, rImin, rImax, cImin, cImax):
 	rcut = int(round(img.shape[0] * (rmin + rmax) / 2.))
 	ccut = int(round(img.shape[1] * (cmin + cmax) / 2.))
 	iA = getIntense(img, rIMin, rcut, cImin, ccut)
@@ -100,8 +100,41 @@ def haarFour(img, rmin, rmax, cmin, cmax):
 	return (iA + iD) - (iB + iB)
 
 #HEY - The learners will be paramatrized with positions being index values, then in production I'm going to convert them to fractional positions in the window since the window is variable
-def weaksWithDims(rmin, rmax, cmin, cmax, theta):
-	h2VertPPlus = WeakLearner(haarTwoVert,
+def sweepCut(rmin, rmax, cmin, cmax, cutmin, cutmax, dcut, func, allLearners):
+	cut = cutmin
+	while cut <= cutmax:
+		allLearners.append(WeakLearner(func, 1, rmin, rmax, cmin, cmax, cut)
+		allLearners.append(WeakLearner(func, -1, rmin, rmax, cmin, cmax, cut)
+		cut += dcut
+
+
+def assembleWeaks(nr, nc):
+	lns = []
+	#make all 2 verticals
+	step = 1
+	fnr = float(nr)
+	fnc = float(nc)
+	for numCols in range(2, nc+1, 2 * step):
+		for numRows in range(1, nr+1, step):
+			for c in range(1, 1 + nc - numCols, step):
+				for r in range(1, 1 + nc - numRows, step):
+					cMinFrac = c / fnc
+					cMaxFrac = (c + numCols) / fnc
+					rMinFrac = r / fnr
+					rMaxFrac = (r + numRows) / fnr
+					sweepCut(rMinFrac, rMaxFrac, cMinFrac, cMaxFrac, -.5, .5, .1, haarTwoVert, lns)
+
+	#horizonal 2's
+	for numRows range(2, nr+1, 2 * step):
+		for numColsin range(1, nc+1, step):
+			for c in range(1, 1 + nc - numCols, step):
+				for r in range(1, 1 + nc - numRows, step):
+					cMinFrac = c / fnc
+					cMaxFrac = (c + numCols) / fnc
+					rMinFrac = r / fnr
+					rMaxFrac = (r + numRows) / fnr
+					sweepCut(rMinFrac, rMaxFrac, cMinFrac, cMaxFrac, -.5, .5, .1, haarTwoHoriz, lns)
+#abs of normalized haar can be at MOST 0.5 (1 diff between the groups, then div by total # sqrs). cut must only sweep -.5, .5
 
 imgs = loadImages('faces/', 1)
 '''
