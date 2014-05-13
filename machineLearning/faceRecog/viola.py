@@ -28,7 +28,7 @@ def toIntIntensity(as2d):
 
 def loadImages(folder, n):
 	fns = os.listdir(folder)[:n]
-	npImgs = []
+	npImgs =
 	for f in fns:
 		img = Image.open(folder + f)
 		nc, nr = img.size
@@ -36,15 +36,20 @@ def loadImages(folder, n):
 		flatGreyscale = toGreyscale(flatRGB)
 		as2d = to2d(flatGreyscale, nr, nc)
 		npImgs.append(toIntIntensity(as2d))
-	return npImgs
+	return np.array(npImgs) #MEBE
 
 
 class StrongLearner:
-	def __init__(self, weakLearners, weights):
-		self.learners = zip(weakLearners, weights)
+	def __init__(self, weakLearners):
+		self.learners = weakLearners
+		self.normalizeWeights()
 		self.offset = 0.
+	def normalizeWeights(self):
+		totalWeight = sum(ln.weight for ln in self.learners)
+		for l in self.learners:
+			l.weight /= totalWeight
 	def learnOffset(self, faces, nonfaces, maxFalseNegFrac):
-		offset = totalWeight/2
+		offset = .5
 		dOffset = offset / 10
 		wrongs = len(faces)
 		while float(wrongs) / len(faces) > maxFlaseNegFrac:
@@ -59,7 +64,7 @@ class StrongLearner:
 	def evalImgLearn(self, img, offset):
 		sumWeaks = 0.
 		for learner in self.learners:
-			sumWeaks += learner[0].evalImg(img) * learners[1]
+			sumWeaks += learner.evalImg(img) * learner.weight
 		return sumWeaks > offset
 
 	def evalImg(self, img): #OY - YOU WILL NEED TO PASS IN THE DIMENSIONS OF THE WINDOW WE ARE LOOKING AT
@@ -119,8 +124,8 @@ class WeakLearner:
 		return errors[idx][0] + errors[idx][1]
 	def yieldErrors(self, faces, nonfaces):
 
-		faceErrors = np.zeros(len(faces))
-		nonfaceErrors = np.zeros(len(nonfaces))
+		faceErrors = np.zeros(len(faces), np.int32)
+		nonfaceErrors = np.zeros(len(nonfaces), np.int32)
 		for i, f in enumerate(faces):
 			if not self.evalImg(f):
 				faceErrors[i] = 1
@@ -194,7 +199,6 @@ def haarFour(img, rmin, rmax, cmin, cmax, rImin, rImax, cImin, cImax):
 
 #HEY - The learners will be paramatrized with positions being index values, then in production I'm going to convert them to fractional positions in the window since the window is variable
 
-#MAKE WEIGHTS BE NUMPY ARRAY
 def updateWeights(ln, faces, nonfaces, faceWeights, nonfaceWeights):
 	errFace, errNon = ln.yieldWeights(faces, nonfaces)
 	#weights must sum to 1 at this point.  is assured by previous calling of this function
@@ -209,10 +213,14 @@ def updateWeights(ln, faces, nonfaces, faceWeights, nonfaceWeights):
 	for i in range(len(nonfaceWeights)):
 		if errNon[i]:
 			nonfaceWeights *= beta
-
+	allWeights = sum(faceWeights) + sum(nonfaceWeights)
+	for i in range(len(faceWeights))
+		faceWeights[i] /= allWeights
+	for i in range(len(nonfaceWeights))
+		nonfaceWeights[i] /= allWeights
 
 #make huge list of all weak learners, copy out selected ones and then recycle list
-def findWeakClassifier(lns, faces, nonfaces, faceWights, nonfaceWeights):
+def findWeakLearner(lns, faces, nonfaces, faceWights, nonfaceWeights):
 	cutoffs = [-.5 + .1 * i for i in range(11)]
 	minErr = sys.float_info.max
 	minErrLn = None
@@ -225,7 +233,14 @@ def findWeakClassifier(lns, faces, nonfaces, faceWights, nonfaceWeights):
 	return ln.copy()
 
 
-
+def findStrongLearner(lns, faces, nonfaces, howmany):
+	selectedLns = []
+	faceWeights = np.array([fw for i in range(len(faces))], np.float64)
+	nonfaceWeights = np.array([nfw for i in range(len(nonfaces))], np.float64)
+	for i in range(howmany):
+		selectedLns.append(findWeakLearner(lns, faces, nonfaces, faceWeights, nonfaceWeights))
+		updateWeights(selectedLns[-1], faces, nonfaces, faceWeights, nonfaceWeights)
+	return StrongLearner(selectedLns)
 
 def assembleWeaks(nr, nc):
 	lns = []
@@ -287,17 +302,3 @@ numClasses = [nums, from, that, paper]
 strongLearners = []
 for numClass
 
-'''
-a = imgs[0][0]
-b = imgs[1][0]
-rr = 40
-cc = 30
-s = 0.
-for r in range(rr):
-	for c in range(cc):
-		s += b[r][c]
-print s
-print a[rr][cc]
-
-
-'''
