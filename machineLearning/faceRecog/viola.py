@@ -1,6 +1,8 @@
 import Image
 import numpy as np
 import os
+import sys
+
 # am using row, column notation like a normal person
 def toGreyscale(rgb):
 	greyscale = np.zeros(len(rgb))
@@ -41,8 +43,7 @@ class StrongLearner:
 	def __init__(self, weakLearners, weights):
 		self.learners = zip(weakLearners, weights)
 		self.offset = 0.
-	def learnOffset(self, faces, nonfaces, faceWeights, nonfaceWeights, maxFalseNegFrac):
-		totalWeight = sum(faceWeights)
+	def learnOffset(self, faces, nonfaces, maxFalseNegFrac):
 		offset = totalWeight/2
 		dOffset = offset / 10
 		wrongs = len(faces)
@@ -81,12 +82,13 @@ class WeakLearner:
 		self.rmax = rmax
 		self.cmin = cmin
 		self.cmax = cmax
+		self.weight = 0
 	def copy(self):
 		wl = WeakLearner(self.haar, self.p, self.rmin, self.rmax, self.cmin, self.cmax)
 		wl.cut = self.cut
 		return wl
 	def trainOnImgs(self, faces, nonfaces, faceWeights, nonfaceWeights, cuts):
-		#mushing all the cutoffs for a given position and p into one because having two classifiers like this with different cuts makes no sense.  only select one
+		#mushing all the cutoffs for a given position and p into one to save memory.  Can only use one anyway.  only select one
 		#also - probably won't select the same one twice since its errors get more heavily weighted, so that's not a huge worry
 		errors = []
 		faceError = 0
@@ -115,6 +117,17 @@ class WeakLearner:
 
 		self.cut = cuts[idx]
 		return errors[idx][0] + errors[idx][1]
+	def yieldErrors(self, faces, nonfaces):
+
+		faceErrors = np.zeros(len(faces))
+		nonfaceErrors = np.zeros(len(nonfaces))
+		for i, f in enumerate(faces):
+			if not self.evalImg(f):
+				faceErrors[i] = 1
+		for i, n in enumerate(nonfaces):
+			if self.evalImg(n):
+				nonfaceErrors[i] = 1
+		return [faceErrors, nonfaceErrors]
 
 	def evalImgTrain(self, img, cut):
 		shaper = img.shape[0]
@@ -181,8 +194,37 @@ def haarFour(img, rmin, rmax, cmin, cmax, rImin, rImax, cImin, cImax):
 
 #HEY - The learners will be paramatrized with positions being index values, then in production I'm going to convert them to fractional positions in the window since the window is variable
 
+#MAKE WEIGHTS BE NUMPY ARRAY
+def updateWeights(ln, faces, nonfaces, faceWeights, nonfaceWeights):
+	errFace, errNon = ln.yieldWeights(faces, nonfaces)
+	#weights must sum to 1 at this point.  is assured by previous calling of this function
+	innerProdFaces = np.dot(faceWeights, errFace)
+	innerProdNonFaces = np.dot(nonfaceWeights, errNon)
+	sumErr = innerProdFaces + innerProdNonFaces
+	beta = sumErr / (1 - sumErr)
+	ln.weight = math.log(1/beta)
+	for i in range(len(faceWeights)):
+		if errFace[i]:
+			faceWeights[i] *= beta
+	for i in range(len(nonfaceWeights)):
+		if errNon[i]:
+			nonfaceWeights *= beta
+
+
 #make huge list of all weak learners, copy out selected ones and then recycle list
-def findWeakClassifier
+def findWeakClassifier(lns, faces, nonfaces, faceWights, nonfaceWeights):
+	cutoffs = [-.5 + .1 * i for i in range(11)]
+	minErr = sys.float_info.max
+	minErrLn = None
+	for ln in lns:
+		thisErr = ln.trainOnImgs(faces, nonfaces, faceWeights, nonfaceWeights)
+		if thisErr < minErr:
+			minErr = thisErr
+			minErrLn = ln
+	#weights NOT updated by this
+	return ln.copy()
+
+
 
 
 def assembleWeaks(nr, nc):
@@ -194,7 +236,7 @@ def assembleWeaks(nr, nc):
 	for numCols in range(2, nc+1, 2 * step):
 		for numRows in range(1, nr+1, step):
 			for c in range(1, 1 + nc - numCols, step):
-				for r in range(1, 1 + nc - numRows, step):
+				for r in range(1, 1 + nr - numRows, step):
 					cMinFrac = c / fnc
 					cMaxFrac = (c + numCols) / fnc
 					rMinFrac = r / fnr
@@ -204,16 +246,38 @@ def assembleWeaks(nr, nc):
 
 	#horizonal 2's
 	for numRows in range(2, nr+1, 2 * step):
-		for numColsin in range(1, nc+1, step):
+		for numCols in range(1, nc+1, step):
 			for c in range(1, 1 + nc - numCols, step):
-				for r in range(1, 1 + nc - numRows, step):
+				for r in range(1, 1 + nr - numRows, step):
 					cMinFrac = c / fnc
 					cMaxFrac = (c + numCols) / fnc
 					rMinFrac = r / fnr
 					rMaxFrac = (r + numRows) / fnr
 					lns.append(WeakLearner(haarTwoHoriz, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
 					lns.append(WeakLearner(haarTwoHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
-	#now just do rest
+	#vertical 3's
+	for numCols in range(3, nc+1, 3 * step):
+		for numRows in range(1, nr+1, step):
+			for c in range(1, 1 + nc - numCols, step):
+				for r in range(1, 1 + nr - numRows, step):
+					cMinFrac = c / fnc
+					cMaxFrac = (c + numCols) / fnc
+					rMinFrac = r / fnr
+					rMaxFrac = (r + numRows) / fnr
+					lns.append(WeakLearner(haarThreeVert, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
+					lns.append(WeakLearner(haarThreeVert, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
+	#horizontal 3's
+	for numRows in range(3, nc+1, 3 * step):
+		for numCols in range(1, nr+1, step):
+			for c in range(1, 1 + nc - numCols, step):
+				for r in range(1, 1 + nr - numRows, step):
+					cMinFrac = c / fnc
+					cMaxFrac = (c + numCols) / fnc
+					rMinFrac = r / fnr
+					rMaxFrac = (r + numRows) / fnr
+					lns.append(WeakLearner(haarThreeHoriz, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
+					lns.append(WeakLearner(haarThreeHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
+	#not going to worry about diag diff ones just yet
 	return lns
 #abs of normalized haar can be at MOST 0.5 (1 diff between the groups, then div by total # sqrs). cut must only sweep -.5, .5
 
