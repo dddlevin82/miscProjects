@@ -42,15 +42,17 @@ class StrongLearner:
 		self.learners = zip(weakLearners, weights)
 		self.offset = 0.
 	def learnOffset(self, faces, nonfaces, faceWeights, nonfaceWeights, maxFalseNegFrac):
-		offset = 0.
+		totalWeight = sum(faceWeights)
+		offset = totalWeight/2
+		dOffset = offset / 10
 		wrongs = len(faces)
 		while float(wrongs) / len(faces) > maxFlaseNegFrac:
 			wrongs = 0
 			for i, img in enumerate(faces):
 				if not self.evalImgLearn(img, offset):
 					wrongs += 1
-			offset -= .1
-		offset += .1
+			offset -= dOffset
+		offset += dOffset
 		self.offset = offset
 
 	def evalImgLearn(self, img, offset):
