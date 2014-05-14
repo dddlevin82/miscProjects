@@ -214,9 +214,9 @@ def updateWeights(ln, faces, nonfaces, faceWeights, nonfaceWeights):
 		if errNon[i]:
 			nonfaceWeights *= beta
 	allWeights = sum(faceWeights) + sum(nonfaceWeights)
-	for i in range(len(faceWeights))
+	for i in range(len(faceWeights)):
 		faceWeights[i] /= allWeights
-	for i in range(len(nonfaceWeights))
+	for i in range(len(nonfaceWeights)):
 		nonfaceWeights[i] /= allWeights
 
 #make huge list of all weak learners, copy out selected ones and then recycle list
