@@ -2,41 +2,24 @@ import Image
 import numpy as np
 import os
 import sys
-
+import re
 # am using row, column notation like a normal person
-def toGreyscale(rgb):
-	greyscale = np.zeros(len(rgb))
-	for i in range(len(rgb)):
-		greyscale[i] = .2989 * rgb[i][0] / 255 + .5870 * rgb[i][1] / 255 + .1140 * rgb[i][2] / 255 # see stackoverflow.com/question/687261/converting-rgb-to-grayscale-intensity.  has to do with human perception
-	return greyscale
 
-def to2d(flat, nr, nc):
-	img2d = []
-	for i in range(len(flat) / nc):
-		img2d.append(flat[nc*i : nc*(i+1)])
-	return np.array(img2d, np.float64)
-
-def toIntIntensity(as2d):
-	intense = np.zeros((as2d.shape[0] + 1, as2d.shape[1] + 1), np.float64)
-	#intense has bordering row, col, of zeros
-	for nRow in range(0, as2d.shape[0]):
-		sumCol = 0
-		for nCol in range(0, as2d.shape[1]):
-			sumCol += as2d[nRow][nCol]
-			intense[nRow+1][nCol+1] = intense[nRow][nCol+1] + sumCol
-	return intense
-
-def loadImages(folder, n):
-	fns = os.listdir(folder)[:n]
-	npImgs =
-	for f in fns:
-		img = Image.open(folder + f)
-		nc, nr = img.size
-		flatRGB = np.array(img.getdata())
-		flatGreyscale = toGreyscale(flatRGB)
-		as2d = to2d(flatGreyscale, nr, nc)
-		npImgs.append(toIntIntensity(as2d))
-	return np.array(npImgs) #MEBE
+def loadImages(fn, n):
+	f = open(fn, 'r')
+	size = 65
+	imgs = []
+	myRe = re.compile('^END')
+	img = []
+	for line in f.readlines():
+		if not myRe.search(line):
+			img.append([float(x) for x in line.split()])
+		else:
+			imgs.append(np.array(img, np.float64))
+			img = []
+			if len(imgs) == n:
+				break
+	return np.array(imgs)
 
 
 class StrongLearner:
@@ -296,9 +279,11 @@ def assembleWeaks(nr, nc):
 	return lns
 #abs of normalized haar can be at MOST 0.5 (1 diff between the groups, then div by total # sqrs). cut must only sweep -.5, .5
 
-imgs = loadImages('faces/', 1)
-allLearners = assembleWeaks(whatever, whatever2)
-numClasses = [nums, from, that, paper]
-strongLearners = []
-for numClass
+imgs = loadImages('../../../asIntFaces.txt', 2000)
+print len(imgs)
+#print imgs[0]
+#allLearners = assembleWeaks(whatever, whatever2)
+#numClasses = [nums, from, that, paper]
+#strongLearners = []
+#for numClass
 
