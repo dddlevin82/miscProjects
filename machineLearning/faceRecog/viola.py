@@ -245,7 +245,6 @@ def assembleWeaks(nr, nc):
 					#lns.append(WeakLearner(haarTwoVert, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
 
 	#horizonal 2's
-	'''
 	for numRows in range(2, nr+1, 2 * step):
 		for numCols in range(1, nc+1, step):
 			for c in range(0, nc - numCols, step):
@@ -256,7 +255,6 @@ def assembleWeaks(nr, nc):
 					rMaxFrac = (r + numRows) / fnr
 					lns.append(WeakLearner(haarTwoHoriz, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
 					#lns.append(WeakLearner(haarTwoHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
-	'''
 	#vertical 3's
 	'''
 	for numCols in range(3, nc+1, 3 * step):
@@ -282,15 +280,12 @@ def assembleWeaks(nr, nc):
 					lns.append(WeakLearner(haarThreeHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
 	'''
 	#not going to worry about diag diff ones just yet
-	return lns
+	return np.array(lns)
 #abs of normalized haar can be at MOST 0.5 (1 diff between the groups, then div by total # sqrs). cut must only sweep -.5, .5
 
 #IMGS, NUMROWS, NUMCOLS = loadImages('../../../asIntFaces.txt', 2000)
-allLearners = assembleWeaks(4, 4)
+allLearners = assembleWeaks(65, 65)
 print len(allLearners)
-for ln in allLearners:
-	print 'new learner'
-	print ', '.join([str(ln.rmin), str(ln.rmax), str(ln.cmin), str(ln.cmax)])
 #numClasses = [nums, from, that, paper]
 #strongLearners = []
 #for numClass
