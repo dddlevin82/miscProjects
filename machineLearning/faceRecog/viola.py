@@ -242,7 +242,7 @@ def assembleWeaks(nr, nc):
 					rMinFrac = r / fnr
 					rMaxFrac = (r + numRows) / fnr
 					lns.append(WeakLearner(haarTwoVert, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
-					#lns.append(WeakLearner(haarTwoVert, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
+					lns.append(WeakLearner(haarTwoVert, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
 
 	#horizonal 2's
 	for numRows in range(2, nr+1, 2 * step):
@@ -254,13 +254,13 @@ def assembleWeaks(nr, nc):
 					rMinFrac = r / fnr
 					rMaxFrac = (r + numRows) / fnr
 					lns.append(WeakLearner(haarTwoHoriz, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
-					#lns.append(WeakLearner(haarTwoHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
+					lns.append(WeakLearner(haarTwoHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
 	#vertical 3's
 	'''
 	for numCols in range(3, nc+1, 3 * step):
 		for numRows in range(1, nr+1, step):
-			for c in range(1, 1 + nc - numCols, step):
-				for r in range(1, 1 + nr - numRows, step):
+			for c in range(0, nc - numCols, step):
+				for r in range(0, nr - numRows, step):
 					cMinFrac = c / fnc
 					cMaxFrac = (c + numCols) / fnc
 					rMinFrac = r / fnr
@@ -270,8 +270,8 @@ def assembleWeaks(nr, nc):
 	#horizontal 3's
 	for numRows in range(3, nc+1, 3 * step):
 		for numCols in range(1, nr+1, step):
-			for c in range(1, 1 + nc - numCols, step):
-				for r in range(1, 1 + nr - numRows, step):
+			for c in range(0, nc - numCols, step):
+				for r in range(0, nr - numRows, step):
 					cMinFrac = c / fnc
 					cMaxFrac = (c + numCols) / fnc
 					rMinFrac = r / fnr
