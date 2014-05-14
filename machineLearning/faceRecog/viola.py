@@ -7,11 +7,12 @@ import re
 
 def loadImages(fn, n):
 	f = open(fn, 'r')
-	size = 65
 	imgs = []
 	myRe = re.compile('^END')
 	img = []
-	for line in f.readlines():
+	lines = f.readlines()
+	size = len(lines[0].split())
+	for line in lines:
 		if not myRe.search(line):
 			img.append([float(x) for x in line.split()])
 		else:
@@ -19,7 +20,7 @@ def loadImages(fn, n):
 			img = []
 			if len(imgs) == n:
 				break
-	return np.array(imgs)
+	return [np.array(imgs), len(imgs[0]), len(imgs[0][0])]
 
 
 class StrongLearner:
@@ -254,6 +255,7 @@ def assembleWeaks(nr, nc):
 					lns.append(WeakLearner(haarTwoHoriz, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
 					lns.append(WeakLearner(haarTwoHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
 	#vertical 3's
+	'''
 	for numCols in range(3, nc+1, 3 * step):
 		for numRows in range(1, nr+1, step):
 			for c in range(1, 1 + nc - numCols, step):
@@ -275,14 +277,14 @@ def assembleWeaks(nr, nc):
 					rMaxFrac = (r + numRows) / fnr
 					lns.append(WeakLearner(haarThreeHoriz, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
 					lns.append(WeakLearner(haarThreeHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
+	'''
 	#not going to worry about diag diff ones just yet
 	return lns
 #abs of normalized haar can be at MOST 0.5 (1 diff between the groups, then div by total # sqrs). cut must only sweep -.5, .5
 
-imgs = loadImages('../../../asIntFaces.txt', 2000)
-print len(imgs)
-#print imgs[0]
-#allLearners = assembleWeaks(whatever, whatever2)
+#IMGS, NUMROWS, NUMCOLS = loadImages('../../../asIntFaces.txt', 2000)
+allLearners = assembleWeaks(3, 3)
+print len(allLearners)
 #numClasses = [nums, from, that, paper]
 #strongLearners = []
 #for numClass
