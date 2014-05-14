@@ -232,28 +232,31 @@ def assembleWeaks(nr, nc):
 	step = 1
 	fnr = float(nr)
 	fnc = float(nc)
+	#vertical 2's
 	for numCols in range(2, nc+1, 2 * step):
 		for numRows in range(1, nr+1, step):
-			for c in range(1, 1 + nc - numCols, step):
-				for r in range(1, 1 + nr - numRows, step):
+			for c in range(0, nc - numCols, step):
+				for r in range(0, nr - numRows, step):
 					cMinFrac = c / fnc
 					cMaxFrac = (c + numCols) / fnc
 					rMinFrac = r / fnr
 					rMaxFrac = (r + numRows) / fnr
 					lns.append(WeakLearner(haarTwoVert, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
-					lns.append(WeakLearner(haarTwoVert, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
+					#lns.append(WeakLearner(haarTwoVert, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
 
 	#horizonal 2's
+	'''
 	for numRows in range(2, nr+1, 2 * step):
 		for numCols in range(1, nc+1, step):
-			for c in range(1, 1 + nc - numCols, step):
-				for r in range(1, 1 + nr - numRows, step):
+			for c in range(0, nc - numCols, step):
+				for r in range(0, nr - numRows, step):
 					cMinFrac = c / fnc
 					cMaxFrac = (c + numCols) / fnc
 					rMinFrac = r / fnr
 					rMaxFrac = (r + numRows) / fnr
 					lns.append(WeakLearner(haarTwoHoriz, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
-					lns.append(WeakLearner(haarTwoHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
+					#lns.append(WeakLearner(haarTwoHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
+	'''
 	#vertical 3's
 	'''
 	for numCols in range(3, nc+1, 3 * step):
@@ -283,8 +286,11 @@ def assembleWeaks(nr, nc):
 #abs of normalized haar can be at MOST 0.5 (1 diff between the groups, then div by total # sqrs). cut must only sweep -.5, .5
 
 #IMGS, NUMROWS, NUMCOLS = loadImages('../../../asIntFaces.txt', 2000)
-allLearners = assembleWeaks(3, 3)
+allLearners = assembleWeaks(4, 4)
 print len(allLearners)
+for ln in allLearners:
+	print 'new learner'
+	print ', '.join([str(ln.rmin), str(ln.rmax), str(ln.cmin), str(ln.cmax)])
 #numClasses = [nums, from, that, paper]
 #strongLearners = []
 #for numClass
