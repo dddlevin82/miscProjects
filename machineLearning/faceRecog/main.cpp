@@ -26,13 +26,9 @@ double lameSum(double *xs, int nx) {
 
 
 Grid *loadImages(string fn, int n, int numRow, int numCol) {
-	cout << "going to malloc" << endl;cout.flush();
 	Grid *imgs = (Grid *) malloc(sizeof(Grid) * n);
 
-	cout << "malloced" << endl;cout.flush();
-	cout << "fn is " << fn << endl; cout.flush();
 	FILE *fr = fopen(fn.c_str(), "rt");
-	cout << "woo!" << endl;cout.flush();
 	char line[ NUMCOLS ];
 	Grid g = Grid(numRow, numCol);
 	int idx = 0;
@@ -133,16 +129,79 @@ StrongLearner findStrongLearner(WeakLearner *lns, int nLns, Grid *faces, int nfa
 	return s;
 }
 
-//WeakLearner *lns assembleWeaks(int nr, int nc, int *numLearners, int step) {
-		
-//}
+WeakLearner *realloc(WeakLearner *lns, int *curNum, int idx) {
+	*curNum = *curNum + fmin(*curNum, 1000000);
+	WeakLearner *newLns = (WeakLearner *) malloc(*curNum * sizeof(WeakLearner));
+	memcpy(newLns, lns, idx+1);
+	free(lns);
+	return newLns;
+}
+
+WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
+	int curNum = 100000;
+	WeakLearner *lns = (WeakLearner *) malloc(curNum * sizeof(WeakLearner));
+	int idx = 0;
+	double fnr = nr;
+	double fnc = nc;
+	int dubstep = 2*step;
+	for (int numCols = 2; numCols<nc+1; numCols+=dubstep) {
+		for (int numRows = 1; numRows<nr+1; numRows+=step) {
+			int c = 0;
+			int cc = nc - numCols;
+			int rr = nr - numRows;
+			if (idx + 2 * rr * cc >= curNum) {
+				lns = realloc(lns, &curNum, idx);
+			}
+			for (; c<cc; c+=step) {
+				int r = 0;
+				for (; r<rr; r+=step) {
+					double cMinFrac = c / fnc;
+					double cMaxFrac = (c + numCols) / fnc;
+					double rMinFrac = r / fnr;
+					double rMaxFrac = (r + numRows) / fnr;
+					lns[idx] = WeakLearner(&haarTwoHoriz, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac);
+					lns[idx+1] = WeakLearner(&haarTwoHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac);
+					idx += 2;
+				}
+			}
+		}
+	
+	}
+	for (int numRows = 2; numRows<nr+1; numRows+=dubstep) {
+		for (int numCols = 1; numCols<nc+1; numCols+=step) {
+			int c = 0;
+			int cc = nc - numCols;
+			int rr = nr - numRows;
+			if (idx + 2 * rr * cc >= curNum) {
+				lns = realloc(lns, &curNum, idx);
+			}
+			for (; c<cc; c+=step) {
+				int r = 0;
+				for (; r<rr; r+=step) {
+					double cMinFrac = c / fnc;
+					double cMaxFrac = (c + numCols) / fnc;
+					double rMinFrac = r / fnr;
+					double rMaxFrac = (r + numRows) / fnr;
+					lns[idx] = WeakLearner(&haarTwoHoriz, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac);
+					lns[idx+1] = WeakLearner(&haarTwoHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac);
+					idx += 2;
+				}
+			}
+		}
+	
+	}
+	*numLearners = idx;
+	return lns;
+}
 
 
 int main() {
 	Grid *IMGSFACES = loadImages("../../../asIntFaces.txt", 1, 65, 65);
-	cout << IMGSFACES[0][1][1] << endl;
 	Grid *IMGSNONFACES = loadImages("../../../asIntNonFaces.txt", 1, 65, 65);
 	int numWeaks;
-//	WeakLearner *lns = assembleWeaks(IMGSFACES[0].nr, IMGSFACES[0].nc, &numWeaks, 1);
+	WeakLearner *lns = assembleWeaks(65, 65, &numWeaks, 1);
+	cout << "weaks" << endl;
+	cout << numWeaks << endl;
+	//WeakLearner *lns = assembleWeaks(IMGSFACES[0].nr, IMGSFACES[0].nc, &numWeaks, 1);
 	return 0;
 }

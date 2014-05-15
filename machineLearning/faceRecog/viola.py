@@ -235,7 +235,7 @@ def findStrongLearner(lns, faces, nonfaces, howmany):
 def assembleWeaks(nr, nc):
 	lns = []
 	#make all 2 verticals
-	step =3
+	step =2
 
 	fnr = float(nr)
 	fnc = float(nc)
@@ -304,6 +304,6 @@ allLearners = assembleWeaks(NUMROWS, NUMCOLS)
 print 'assembled ' + str(len(allLearners)) + ' learners'
 numWeaks = [1]
 strongLearners = []
-for numWeak in numWeaks:
-	strongLearners.append(findStrongLearner(allLearners, IMGSFACE, IMGSNONFACE, numWeak))
+#for numWeak in numWeaks:
+#	strongLearners.append(findStrongLearner(allLearners, IMGSFACE, IMGSNONFACE, numWeak))
 
