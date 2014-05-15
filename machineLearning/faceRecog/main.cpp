@@ -64,6 +64,29 @@ WeakLearner findWeakLearner(WeakLearner *lns, int nLns, Grid *faces, int nfaces,
 
 }
 
+StrongLearner findStrongLearner(WeakLearner *lns, int nLns, Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces, int howmany) {
+	vector<WeakLearner> selected;
+	int totalItems = nfaces + nnonfaces;
+	double fw = (double) nfaces / totalItems;
+	double nfw = (double) nnonfaces / totalItems;
+	double *faceWeights = (double *) malloc(nfaces * sizeof(double));
+	double *nonfaceWeights = (double *) malloc(nnonfaces * sizeof(double));
+	for (int i=0; i<nfaces; i++) {
+		faceWeights[i] = fw;
+
+	}
+	for (int i=0; i<nnonfaces; i++) {
+		nonfaceWeights[i] = nfw;
+	}
+	for (int i=0; i<howmany; i++) {
+		selected.push_back(findWeakLearner(lns, nLns, faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights));
+		updateWeights(selected[selected.size()-1], faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights);
+	}
+	StrongLearner s = StrongLearner(selected);
+	free(faceWeights);
+	free(nonfaceWeights);
+	return s;
+}
 
 int main() {
 
