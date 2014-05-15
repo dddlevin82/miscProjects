@@ -37,11 +37,16 @@ void StrongLearner::learnOffset(Grid *faces, int nFaces, double maxFalseNegFrac)
 bool StrongLearner::evalImgLearn(Grid &face, curOffset) {
 	double sumWeaks = 0;
 	for (unsigned int i=0; i<weakLearners.size(); i++) {
-		sumWeaks += weakLearners[i].evalImg(face) * weakLearners[i].weight;
+		sumWeaks += weakLearners[i].evalImg(face, 0, 0, face.nr, face.nc) * weakLearners[i].weight; //IS THIS RIGHT?
 	}
 	return sumWeaks > curOffset;
 }
 
-bool StrongLearner::evalImg(Grid &face, SEND IN WINDOW STUFF.  FIGURE OUT.) {
+bool StrongLearner::evalImg(Grid &face, int winRow, int winCol, int dWinRow, int dWinCol) {
+	double sumWeaks = 0;
+	for (unsigned int i=0; i<weakLearners.size(); i++) {
+		sumWeaks += weakLearners[i].evalImg(face, winRow, winCol, dWinRow, dWinCol) * weakLearners[i].weight;
+	}
+	return sumWeaks > offset;
 
 }
