@@ -48,7 +48,21 @@ void updateWeights(WeakLearner &ln, Grid *faces, int nfaces, Grid *nonfaces, int
 	}
 }
 
+WeakLearner findWeakLearner(WeakLearner *lns, int nLns, Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces, double *faceWeights, double *nonfaceWeights) {
+	vector<double> cuts = {-.5, -.4, -.3, -.2, -.1, 0, .1, .2, .3, .4, .5};
+	double minErr = 10000000000000000;
+	WeakLearner *minErrLn;
+	for (int i=0; i<nLns; i++) {
+		WeakLearner &ln = lns[i];
+		double thisErr = ln.trainOnImgs(faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights, cuts);
+		if (thisErr < minErr) {
+			minErr = thisErr;
+			minErrLn = &ln;
+		}
+	}
+	return *minErrLn;
 
+}
 
 
 int main() {
