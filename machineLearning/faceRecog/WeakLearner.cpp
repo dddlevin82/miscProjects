@@ -42,8 +42,8 @@ double WeakLearner::trainOnImgs(Grid *faces, int nfaces, Grid *nonfaces, int nno
 }
 
 pair<vector<double>, vector<double> > WeakLearner::yieldErrors(Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces) {
-	vector<int> faceErrors;
-	vector<int> nonfaceErrors;
+	vector<double> faceErrors;
+	vector<double> nonfaceErrors;
 	faceErrors.reserve(nfaces);
 	nonfaceErrors.reserve(nnonfaces);
 	for (int i=0; i<nfaces; i++) {
