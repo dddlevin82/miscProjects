@@ -24,9 +24,9 @@ def toIntIntensity(as2d):
 			intense[nRow+1][nCol+1] = intense[nRow][nCol+1] + sumCol
 	return intense
 
-def processImgs(folder):
-	fns = os.listdir(folder)
-	leFile = open(folder + 'asInt.txt', 'w')
+def processImgs(src, folder):
+	fns = os.listdir(src)
+	leFile = open(folder + 'asIntFaces.txt', 'w')
 	i=0
 	testRe = re.compile('^face[0-9]+\.jpg$')
 	for f in fns:
@@ -35,7 +35,7 @@ def processImgs(folder):
 			i += 1
 			print f
 
-			img = Image.open(folder + f)
+			img = Image.open(src + f)
 			nc, nr = img.size
 			flatRGB = np.array(img.getdata())
 			flatGreyscale = toGreyscale(flatRGB)
@@ -45,4 +45,4 @@ def processImgs(folder):
 				rowAsTxt = ' '.join([str(x) for x in row]) + '\n'
 				leFile.write(rowAsTxt)
 			leFile.write('END\n')
-processImgs('faces/')
+processImgs('faces/', '../../../')

@@ -79,11 +79,12 @@ class WeakLearner:
 	def trainOnImgs(self, faces, nonfaces, faceWeights, nonfaceWeights, cuts):
 		#mushing all the cutoffs for a given position and p into one to save memory.  Can only use one anyway.  only select one
 		#also - probably won't select the same one twice since its errors get more heavily weighted, so that's not a huge worry
-		errors = []
 		faceError = 0
 		nonfaceError = 0
 		rngFaces = range(len(faces))
 		rngNon = range(len(nonfaces))
+		idxErrMin = -1
+		errMin = sys.float_info.max
 		for cut in cuts:
 			faceError = 0
 			nonfaceError = 0
@@ -93,19 +94,15 @@ class WeakLearner:
 			for i in rngNon:
 				if self.evalImgTrain(nonfaces[i], cut):
 					nonfaceError+=nonfaceWeights[i]
+			if faceError + nonfaceError < errMin:
+				idxErrMin = cuts.index(cut)
+				errMin = faceError + nonfaceError
 			errors.append((faceError, nonfaceError))
-		minError = 100000000.
-		idx = -1
-		for i, err in enumerate(errors):
-			error = err[0] + err[1]
-			if error < minError:
-				minError = error
-				idx = i
-		if idx == -1:
+		if idxErrMin == -1:
 			print 'EEP! NO ERROR LESS THAN A GAZILLION'
 
-		self.cut = cuts[idx]
-		return errors[idx][0] + errors[idx][1]
+		self.cut = cuts[idxErrMin]
+		return errMin
 	def yieldErrors(self, faces, nonfaces):
 
 		faceErrors = np.zeros(len(faces), np.int32)
@@ -209,7 +206,7 @@ def findWeakLearner(lns, faces, nonfaces, faceWights, nonfaceWeights):
 	minErr = sys.float_info.max
 	minErrLn = None
 	for ln in lns:
-		thisErr = ln.trainOnImgs(faces, nonfaces, faceWeights, nonfaceWeights)
+		thisErr = ln.trainOnImgs(faces, nonfaces, faceWeights, nonfaceWeights, cutoffs)
 		if thisErr < minErr:
 			minErr = thisErr
 			minErrLn = ln
@@ -219,6 +216,9 @@ def findWeakLearner(lns, faces, nonfaces, faceWights, nonfaceWeights):
 
 def findStrongLearner(lns, faces, nonfaces, howmany):
 	selectedLns = []
+	totalItems = len(faces) + len(nonfaces)
+	fw = float(len(faces)) / totalItems
+	nfw = float(len(nonfaces)) / totalItems
 	faceWeights = np.array([fw for i in range(len(faces))], np.float64)
 	nonfaceWeights = np.array([nfw for i in range(len(nonfaces))], np.float64)
 	for i in range(howmany):
@@ -283,10 +283,15 @@ def assembleWeaks(nr, nc):
 	return np.array(lns)
 #abs of normalized haar can be at MOST 0.5 (1 diff between the groups, then div by total # sqrs). cut must only sweep -.5, .5
 
-#IMGS, NUMROWS, NUMCOLS = loadImages('../../../asIntFaces.txt', 2000)
-allLearners = assembleWeaks(65, 65)
-print len(allLearners)
-#numClasses = [nums, from, that, paper]
-#strongLearners = []
+IMGSFACE, NUMROWS, NUMCOLS = loadImages('../../../asIntFaces.txt', 200)
+IMGSNONFACE, NUMROWS, NUMCOLS = loadImages('../../../asIntFaces.txt', 200)
+print 'loaded ' + str(len(IMGS)) + ' images'
+print 'Num rows in trainings imgs is ' + str(NUMROWS) + ', num cols is ' + str(NUMCOLS)
+allLearners = assembleWeaks(NUMROWS, NUMCOLS)
+print 'assembled' + str(len(allLearners)) + ' learners'
+numWeaks = [1]
+strongLearners = []
+for numWeak in numWeaks:
+	strongLearners.append(findStrongLearner(allLearners, IMGSFACE, IMGSNONFACE, numWeak))
 #for numClass
 
