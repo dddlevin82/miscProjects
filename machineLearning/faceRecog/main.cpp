@@ -1,8 +1,12 @@
 #include "Grid.h"
+#include <stdio.h>
 #include "haar.h"
 #include "WeakLearner.h"
 #include "StrongLearner.h"
 #include "math.h"
+#include <sstream>
+#include <string>
+#define NUMCOLS 1000
 double dotProd(vector<double> &xs, double *ys) { //gaaah so ugly
 	double sum = 0;
 	for (unsigned int i=0, ii=xs.size(); i<ii; i++) {
@@ -18,6 +22,47 @@ double lameSum(double *xs, int nx) {
 		sum += xs[i];
 	}
 	return sum;
+}
+
+
+Grid *loadImages(string fn, int n, int numRow, int numCol) {
+	cout << "going to malloc" << endl;cout.flush();
+	Grid *imgs = (Grid *) malloc(sizeof(Grid) * n);
+
+	cout << "malloced" << endl;cout.flush();
+	cout << "fn is " << fn << endl; cout.flush();
+	FILE *fr = fopen(fn.c_str(), "rt");
+	cout << "woo!" << endl;cout.flush();
+	char line[ NUMCOLS ];
+	Grid g = Grid(numRow, numCol);
+	int idx = 0;
+	int row = 0;
+	while(fgets(line, NUMCOLS, fr) != NULL) {
+		string s = string(line);
+		
+		if (s.find("END") != string::npos) {
+			imgs[idx] = g;
+			if (idx == n-1) {
+				break;
+			}
+			row = 0;
+			idx++;
+		} else {
+			stringstream ss(s);
+			double tmp;
+			int col = 0;
+			while (ss>>tmp) {
+				g[row][col] = tmp;			
+				col++;
+			}
+			row ++;
+		}
+
+
+	}
+	return imgs;	
+
+
 }
 
 void updateWeights(WeakLearner &ln, Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces, double *faceWeights, double *nonfaceWeights) {
@@ -88,7 +133,16 @@ StrongLearner findStrongLearner(WeakLearner *lns, int nLns, Grid *faces, int nfa
 	return s;
 }
 
-int main() {
+//WeakLearner *lns assembleWeaks(int nr, int nc, int *numLearners, int step) {
+		
+//}
 
+
+int main() {
+	Grid *IMGSFACES = loadImages("../../../asIntFaces.txt", 1, 65, 65);
+	cout << IMGSFACES[0][1][1] << endl;
+	Grid *IMGSNONFACES = loadImages("../../../asIntNonFaces.txt", 1, 65, 65);
+	int numWeaks;
+//	WeakLearner *lns = assembleWeaks(IMGSFACES[0].nr, IMGSFACES[0].nc, &numWeaks, 1);
 	return 0;
 }

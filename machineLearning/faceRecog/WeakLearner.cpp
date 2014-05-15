@@ -20,20 +20,26 @@ double WeakLearner::trainOnImgs(Grid *faces, int nfaces, Grid *nonfaces, int nno
 	double errMin = INT_MAX; //meh
 	for (unsigned int i=0, ii=cuts.size(); i<ii; i++) {
 		double cutCur = cuts[i];
+		int numFaceErrors = 0;
+		int numnonFaceErrors = 0;
 		faceError = 0;
 		nonfaceError = 0;
 		for (int j=0; j<nfaces; j++) {
 			if (!evalImgTrain(faces[j], cutCur)) {
 				faceError += faceWeights[j];
+				numFaceErrors ++;
 			}
 		}
 		for (int j=0; j<nnonfaces; j++) {
 			if (evalImgTrain(nonfaces[j], cutCur)) {
 				nonfaceError += nonfaceWeights[j];	
+				numnonFaceErrors ++;
 			}
 		}
 		if (faceError + nonfaceError < errMin) {
 			idxErrMin = i;
+			faceErrors = numFaceErrors;
+			nonfaceErrors = numnonFaceErrors;
 			errMin = faceError + nonfaceError;
 		}
 	}

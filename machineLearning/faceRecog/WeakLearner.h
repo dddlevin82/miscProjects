@@ -15,6 +15,8 @@ class WeakLearner {
 		double cmin;
 		double cmax;
 		double weight;
+		int faceErrors;
+		int nonfaceErrors;
 		double trainOnImgs(Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces, double *faceWeights, double *nonfaceWeights, vector<double> cuts);
 		pair<vector<double>, vector<double> > yieldErrors(Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces);
 		bool evalImgTrain(Grid &img, double cut);
