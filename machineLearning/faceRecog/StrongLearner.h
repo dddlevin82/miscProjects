@@ -2,7 +2,7 @@
 #define STRONG_H
 #include <vector>
 #include "WeakLearner.h"
-
+#include "Grid.h"
 class StrongLearner {
 	public:
 		vector<WeakLearner> weakLearners;

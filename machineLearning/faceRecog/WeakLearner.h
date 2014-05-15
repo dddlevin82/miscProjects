@@ -3,6 +3,7 @@
 #include <vector>
 #include <utility>
 #include <climits>
+#include "Grid.h"
 class WeakLearner {
 	public:
 		double (*haar) (Grid &, int, int, int, int);
