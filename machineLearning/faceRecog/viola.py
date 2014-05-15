@@ -97,7 +97,6 @@ class WeakLearner:
 			if faceError + nonfaceError < errMin:
 				idxErrMin = cuts.index(cut)
 				errMin = faceError + nonfaceError
-			errors.append((faceError, nonfaceError))
 		if idxErrMin == -1:
 			print 'EEP! NO ERROR LESS THAN A GAZILLION'
 
@@ -118,21 +117,24 @@ class WeakLearner:
 	def evalImgTrain(self, img, cut):
 		shaper = img.shape[0]
 		shapec = img.shape[1]
-		rImin = int(round(shaper * rmin))
-		rImax = int(round(shaper * rmax))
-		cImin = int(round(shapec * cmin))
-		cImax = int(round(shapec * cmax))
+		rImin = int(round(shaper * self.rmin))
+		rImax = int(round(shaper * self.rmax))
+		cImin = int(round(shapec * self.cmin))
+		cImax = int(round(shapec * self.cmax))
 		normFact = (rImax - rImin) * (cImax - cImin)
-		return int(self.p * self.haar(img, self.rmin, self.rmax, self.cmin, self.cmax, rImin, rImax, cImin, cImax) / norm < self.p * cut)
+		#if normFact == 6:
+		#	print 'diff is ' + str(self.haar(img, self.rmin, self.rmax, self.cmin, self.cmax, rImin, rImax, cImin, cImax))
+		#	print 'norm fact is ' + str(normFact)
+		return int(self.p * self.haar(img, self.rmin, self.rmax, self.cmin, self.cmax, rImin, rImax, cImin, cImax) / normFact < self.p * cut)
 	def evalImg(self, img): #YOU WILL NEED TO PASS IN THE BOUNDS FOR THE WINDOW YOU ARE LOOKING AT.  THIS IS FINE FOR TRAINING ON THINGS THOUGH
 		shaper = img.shape[0]
 		shapec = img.shape[1]
-		rImin = int(round(shaper * rmin))
-		rImax = int(round(shaper * rmax))
-		cImin = int(round(shapec * cmin))
-		cImax = int(round(shapec * cmax))
+		rImin = int(round(shaper * self.rmin))
+		rImax = int(round(shaper * self.rmax))
+		cImin = int(round(shapec * self.cmin))
+		cImax = int(round(shapec * self.cmax))
 		normFact = (rImax - rImin) * (cImax - cImin)
-		return int(self.p * self.haar(img, self.rmin, self.rmax, self.cmin, self.cmax, rImin, rImax, cImin, cImax) / norm < self.p * self.cut)
+		return int(self.p * self.haar(img, self.rmin, self.rmax, self.cmin, self.cmax, rImin, rImax, cImin, cImax) / normFact < self.p * self.cut)
 
 def getIntense(img, rmin, rmax, cmin, cmax):
 	return img[rmax][cmax] - img[rmin][cmax] - img[rmax][cmin] + img[rmin][cmin]
@@ -149,8 +151,8 @@ def haarTwoHoriz(img, rmin, rmax, cmin, cmax, rImin, rImax, cImin, cImax):
 
 def haarTwoVert(img, rmin, rmax, cmin, cmax, rImin, rImax, cImin, cImax):
 	ccut = int(round(img.shape[1] * (cmin + cmax) / 2.))
-	iA = getIntense(img, rIMin, rImax, ccut, cImax)
-	iB = getIntense(img, rIMin, rImax, cImin, ccut)
+	iA = getIntense(img, rImin, rImax, ccut, cImax)
+	iB = getIntense(img, rImin, rImax, cImin, ccut)
 	return iA - iB
 
 def haarThreeHoriz(img, rmin, rmax, cmin, cmax, rImin, rImax, cImin, cImax):
@@ -201,15 +203,19 @@ def updateWeights(ln, faces, nonfaces, faceWeights, nonfaceWeights):
 		nonfaceWeights[i] /= allWeights
 
 #make huge list of all weak learners, copy out selected ones and then recycle list
-def findWeakLearner(lns, faces, nonfaces, faceWights, nonfaceWeights):
+def findWeakLearner(lns, faces, nonfaces, faceWeights, nonfaceWeights):
 	cutoffs = [-.5 + .1 * i for i in range(11)]
 	minErr = sys.float_info.max
 	minErrLn = None
+	i = 0
 	for ln in lns:
 		thisErr = ln.trainOnImgs(faces, nonfaces, faceWeights, nonfaceWeights, cutoffs)
 		if thisErr < minErr:
 			minErr = thisErr
 			minErrLn = ln
+		if not i%100:
+			print i
+		i+=1
 	#weights NOT updated by this
 	return ln.copy()
 
@@ -229,14 +235,18 @@ def findStrongLearner(lns, faces, nonfaces, howmany):
 def assembleWeaks(nr, nc):
 	lns = []
 	#make all 2 verticals
-	step = 1
+	step =3
+
 	fnr = float(nr)
 	fnc = float(nc)
 	#vertical 2's
+	#sizes = []
 	for numCols in range(2, nc+1, 2 * step):
 		for numRows in range(1, nr+1, step):
 			for c in range(0, nc - numCols, step):
 				for r in range(0, nr - numRows, step):
+					#if not (numCols * numRows in sizes):
+					#	sizes.append(numCols*numRows)
 					cMinFrac = c / fnc
 					cMaxFrac = (c + numCols) / fnc
 					rMinFrac = r / fnr
@@ -249,6 +259,8 @@ def assembleWeaks(nr, nc):
 		for numCols in range(1, nc+1, step):
 			for c in range(0, nc - numCols, step):
 				for r in range(0, nr - numRows, step):
+					#if not (numCols * numRows in sizes):
+					#	sizes.append(numCols*numRows)
 					cMinFrac = c / fnc
 					cMaxFrac = (c + numCols) / fnc
 					rMinFrac = r / fnr
@@ -256,6 +268,7 @@ def assembleWeaks(nr, nc):
 					lns.append(WeakLearner(haarTwoHoriz, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
 					lns.append(WeakLearner(haarTwoHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac))
 	#vertical 3's
+	#print sorted(sizes)
 	'''
 	for numCols in range(3, nc+1, 3 * step):
 		for numRows in range(1, nr+1, step):
@@ -285,13 +298,12 @@ def assembleWeaks(nr, nc):
 
 IMGSFACE, NUMROWS, NUMCOLS = loadImages('../../../asIntFaces.txt', 200)
 IMGSNONFACE, NUMROWS, NUMCOLS = loadImages('../../../asIntFaces.txt', 200)
-print 'loaded ' + str(len(IMGS)) + ' images'
+print 'loaded ' + str(len(IMGSFACE)) + ' face images and ' + str(len(IMGSNONFACE)) + ' non faces'
 print 'Num rows in trainings imgs is ' + str(NUMROWS) + ', num cols is ' + str(NUMCOLS)
 allLearners = assembleWeaks(NUMROWS, NUMCOLS)
-print 'assembled' + str(len(allLearners)) + ' learners'
+print 'assembled ' + str(len(allLearners)) + ' learners'
 numWeaks = [1]
 strongLearners = []
 for numWeak in numWeaks:
 	strongLearners.append(findStrongLearner(allLearners, IMGSFACE, IMGSNONFACE, numWeak))
-#for numClass
 
