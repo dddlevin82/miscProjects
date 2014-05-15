@@ -8,7 +8,7 @@ class WeakLearner {
 	public:
 		double (*haar) (Grid &, int, int, int, int);
 		int p;
-		WeakLearner(double (*haarArg) (Grid &, int, int, int, int), int, double, double, double, double)
+		WeakLearner(double (*haarArg) (Grid &, int, int, int, int), int, double, double, double, double);
 		double cut;
 		double rmin;
 		double rmax;
@@ -17,7 +17,7 @@ class WeakLearner {
 		double weight;
 		double trainOnImgs(Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces, double *faceWeights, double *nonfaceWeights, vector<double> cuts);
 		pair<vector<int>, vector<int> > yieldErrors(Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces);
-		bool evalImgTrain(Grid *img, double cut);
-		bool evalImg(Grid *img, winRow, winCol, dWinRow, dWinCol);
-}
+		bool evalImgTrain(Grid &img, double cut);
+		bool evalImg(Grid &img, int winRow, int winCol, int dWinRow, int dWinCol);
+};
 #endif

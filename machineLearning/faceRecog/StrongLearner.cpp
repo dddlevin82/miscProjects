@@ -8,11 +8,11 @@ StrongLearner::StrongLearner(vector<WeakLearner> weaks) {
 void StrongLearner::normalizeWeights() {
 	double totalWeight = 0;
 	for (unsigned int i=0; i<weakLearners.size(); i++) {
-		totalWeight += weakLearners[i].weight
+		totalWeight += weakLearners[i].weight;
 	}
 
 	for (unsigned int i=0; i<weakLearners.size(); i++) {
-		weakLearners[i].weight /= totalWeight
+		weakLearners[i].weight /= totalWeight;
 	}
 }
 
@@ -34,10 +34,10 @@ void StrongLearner::learnOffset(Grid *faces, int nFaces, double maxFalseNegFrac)
 	offset = curOffset;	
 }
 
-bool StrongLearner::evalImgLearn(Grid &face, curOffset) {
+bool StrongLearner::evalImgLearn(Grid &face, double curOffset) {
 	double sumWeaks = 0;
 	for (unsigned int i=0; i<weakLearners.size(); i++) {
-		sumWeaks += weakLearners[i].evalImg(face, 0, 0, face.nr, face.nc) * weakLearners[i].weight; //IS THIS RIGHT?
+		sumWeaks += weakLearners[i].evalImg(face, 0, 0, (int) face.nr - 1, (int) face.nc - 1) * weakLearners[i].weight; //IS THIS RIGHT?
 	}
 	return sumWeaks > curOffset;
 }

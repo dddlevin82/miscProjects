@@ -18,7 +18,7 @@ double WeakLearner::trainOnImgs(Grid *faces, int nfaces, Grid *nonfaces, int nno
 	double nonfaceError;
 	int idxErrMin = -1;
 	double errMin = INT_MAX; //meh
-	for (unsigned int i=0, i=cuts.size(); i<ii; i++) {
+	for (unsigned int i=0, ii=cuts.size(); i<ii; i++) {
 		double cutCur = cuts[i];
 		faceError = 0;
 		nonfaceError = 0;
@@ -33,11 +33,11 @@ double WeakLearner::trainOnImgs(Grid *faces, int nfaces, Grid *nonfaces, int nno
 			}
 		}
 		if (faceError + nonfaceError < errMin) {
-			idxErrorMin = i;
+			idxErrMin = i;
 			errMin = faceError + nonfaceError;
 		}
 	}
-	cut = cutCur;
+	cut = cuts[idxErrMin];
 	return errMin;
 }
 
@@ -64,8 +64,8 @@ pair<vector<int>, vector<int> > WeakLearner::yieldErrors(Grid *faces, int nfaces
 }
 
 bool WeakLearner::evalImgTrain(Grid &img, double curCut) {
-	double nr = face.nr;
-	double nc = face.nc;
+	double nr = img.nr;
+	double nc = img.nc;
 	int rImin = nr * rmin + .5; //.5 to round
 	int rImax = nr * rmax + .5;
 	int cImin = nc * cmin + .5;
@@ -81,5 +81,5 @@ bool WeakLearner::evalImg(Grid &img, int winRow, int winCol, int dWinRow, int dW
 	int cImin = winCol + dWinCol * cmin + .5;
 	int cImax = winCol + dWinCol * cmax + .5;
 	double normFact = (rImax - rImin) * (cImax - cImin);
-	return p * haar(img, rIMin, rImax, cImin, cImax) / normFact < p * cut;
+	return p * haar(img, rImin, rImax, cImin, cImax) / normFact < p * cut;
 }

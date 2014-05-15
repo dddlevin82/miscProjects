@@ -1,25 +1,26 @@
-#ifndef ENUMERATED_GRID_H
-#define	ENUMERATED_GRID_H 
+#ifndef GRID_H
+#define	GRID_H
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include <iostream>
 using namespace std;
-template <class T>
 class Grid {
 	public:
 
 		double *cs;
 		double *rs;
 		unsigned int nc, nr;
-		T **zss;
-		T *rawZs;
+		double **zss;
+		double *rawZs;
 		void init(int nr_, int nc_) {
 			nc = nc_;
 			nr = nr_;
 			//calloced doubles read as zero in g++ 
 			cs = (double *) calloc(nc, sizeof(double));
 			rs = (double *) calloc(nr, sizeof(double));
-			rawZs = (T *) calloc(nc * nr, sizeof(T));
-			zss = (T **) calloc(nr, sizeof(T *));
+			rawZs = (double *) calloc(nc * nr, sizeof(double));
+			zss = (double **) calloc(nr, sizeof(double *));
 			for (unsigned int i=0; i<nr; i++) {
 				zss[i] = &rawZs[i * nc];
 			}	
@@ -52,24 +53,24 @@ class Grid {
 		Grid(Grid &other) {
 			this->nc = other.nc;
 			this->nr = other.nr;
-			this->xs = (double *) malloc(this->nc * sizeof(T));
-			this->ys = (double *) malloc(this->nr * sizeof(T));
-			this->zss = (double **) malloc(this->nr * sizeof(T *));
-			this->rawZs = (double *) malloc(this->nc * this->nr * sizeof(T));
-			memcpy(this->xs, other.xs, this->nc);
-			memcpy(this->ys, other.ys, this->nr);
+			this->cs = (double *) malloc(this->nc * sizeof(double));
+			this->rs = (double *) malloc(this->nr * sizeof(double));
+			this->zss = (double **) malloc(this->nr * sizeof(double *));
+			this->rawZs = (double *) malloc(this->nc * this->nr * sizeof(double));
+			memcpy(this->cs, other.cs, this->nc);
+			memcpy(this->rs, other.rs, this->nr);
 			memcpy(this->zss, other.zss, this->nc);
 			memcpy(this->rawZs, other.rawZs, this->nc * this->nr);
 		};
 		Grid operator=(Grid &&other) {
 			this->nc = other.nc;
 			this->nr = other.nr;
-			this->xs = other.xs;
-			this->ys = other.ys;
+			this->cs = other.cs;
+			this->rs = other.rs;
 			this->rawZs = other.rawZs;
 			this->zss = other.zss;
-			other.xs = NULL;
-			other.ys = NULL;
+			other.cs = NULL;
+			other.rs = NULL;
 			other.rawZs = NULL;
 			other.zss = NULL;
 			return *this;
@@ -77,12 +78,12 @@ class Grid {
 		Grid operator=(Grid &other) {
 			this->nc = other.nc;
 			this->nr = other.nr;
-			this->xs = (double *) malloc(this->nc, sizeof(T));
-			this->ys = (double *) malloc(this->nr, sizeof(T));
-			this->zss = (double **) malloc(this->nr, sizeof(T *));
-			this->rawZs = (double *) malloc(this->nc * this->nr, sizeof(T));
-			memcpy(this->xs, other.xs, this->nc);
-			memcpy(this->ys, other.ys, this->nr);
+			this->cs = (double *) malloc(this->nc * sizeof(double));
+			this->rs = (double *) malloc(this->nr * sizeof(double));
+			this->zss = (double **) malloc(this->nr * sizeof(double *));
+			this->rawZs = (double *) malloc(this->nc * this->nr * sizeof(double));
+			memcpy(this->cs, other.cs, this->nc);
+			memcpy(this->rs, other.rs, this->nr);
 			memcpy(this->zss, other.zss, this->nc);
 			memcpy(this->rawZs, other.rawZs, this->nc * this->nr);
 			return *this;
