@@ -178,7 +178,7 @@ def haarFour(img, rmin, rmax, cmin, cmax, rImin, rImax, cImin, cImax):
 	iB = getIntense(img, rcut, rImax, cImin, ccut)
 	iC = getIntense(img, rIMin, rcut, ccut, cImax)
 	iD = getIntense(img, rcut, rImax, ccut, cImax)
-	return (iA + iD) - (iB + iB)
+	return (iA + iD) - (iB + iC)
 
 #HEY - The learners will be paramatrized with positions being index values, then in production I'm going to convert them to fractional positions in the window since the window is variable
 
