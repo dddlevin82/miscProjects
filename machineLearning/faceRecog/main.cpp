@@ -298,7 +298,7 @@ WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
 
 
 int main() {
-	int numImgs = 1;
+	int numImgs = 300;
 	Grid *IMGSFACES = loadImages("../../../asIntFaces.txt", numImgs, 65, 65);
 	cout << IMGSFACES[0][2][2] << endl;
 	Grid *IMGSNONFACES = loadImages("../../../asIntNonFaces.txt", numImgs, 65, 65);
