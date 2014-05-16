@@ -52,6 +52,8 @@ void WeakLearner::print() {
 	cout << "printing weak learner"<<endl;
 	cout << "r goes " << rmin << " to " << rmax << endl;
 	cout << "c goes " <<  cmin << " to " << cmax << endl;
+	cout << "cut is " << cut << ", p is " << p << endl;
+	cout << faceErrors << " face errors and " << nonfaceErrors << " non face" << endl;
 	if (haar == &haarTwoHoriz) {
 		cout << "am horizontal" << endl;
 	} else if (haar == &haarTwoVert) {
