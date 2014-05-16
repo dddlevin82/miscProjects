@@ -3,11 +3,12 @@
 #include "haar.h"
 #include "WeakLearner.h"
 #include "StrongLearner.h"
+#include <pthread.h>
 #include "math.h"
 #include <sstream>
 #include <string>
 #define NUMCOLS 1000
-
+#define NUMTHREADS 4 
 bool spew = false;
 
 double dotProd(vector<double> &xs, double *ys) { //gaaah so ugly
@@ -93,10 +94,88 @@ void updateWeights(WeakLearner &ln, Grid *faces, int nfaces, Grid *nonfaces, int
 	}
 }
 
+struct thread_info {
+	WeakLearner *lns;
+	int lnMin;
+	int lnMax;
+	int nLns;
+	Grid *faces;
+	int nfaces;
+	Grid *nonfaces;
+	int nnonfaces;
+	double *faceWeights;
+	double *nonfaceWeights;
+	int tid;
+	WeakLearner *(*bests)[NUMTHREADS];
+	double (*bestErrors)[NUMTHREADS];
+	vector<double> cuts;
+};
+
+
+
+void *runWeaks(void *arg) {
+	thread_info t = *((thread_info *) arg);
+	double minErr = 1000000000000000000;
+	WeakLearner *best;
+	for (int i=t.lnMin; i<t.lnMax; i++) {
+		
+		if (!(i%1000)) {
+			cout << i << " of " << t.nLns << endl;
+		}
+		double thisErr = t.lns[i].trainOnImgs(t.faces, t.nfaces, t.nonfaces, t.nnonfaces, t.faceWeights, t.nonfaceWeights, t.cuts);
+		if (thisErr < minErr) {
+			minErr = thisErr;
+			best = &t.lns[i];
+		}
+	}
+	(*t.bests)[t.tid] = best;
+	(*t.bestErrors)[t.tid] = minErr;
+	return 0;	
+	
+}
+
+
 WeakLearner findWeakLearner(WeakLearner *lns, int nLns, Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces, double *faceWeights, double *nonfaceWeights) {
 	vector<double> cuts = {-.5, -.4, -.3, -.2, -.1, 0, .1, .2, .3, .4, .5};
-	double minErr = 10000000000000000;
-	WeakLearner *minErrLn;
+	thread_info infos[NUMTHREADS];
+	WeakLearner *bests[NUMTHREADS];
+	double bestErrors[NUMTHREADS];
+	pthread_t threads[NUMTHREADS];
+	for (int i=0; i<NUMTHREADS; i++) {
+		thread_info t;
+		t.lns = lns;
+		t.nLns = nLns;
+		t.lnMin = (i * nLns) / NUMTHREADS;
+		t.lnMax = ((i+1) * nLns) / NUMTHREADS;
+		t.faces = faces;
+		t.nfaces = nfaces;
+		t.nonfaces = nonfaces;
+		t.nnonfaces = nnonfaces;
+		t.faceWeights = faceWeights;
+		t.nonfaceWeights = nonfaceWeights;
+		t.tid = i;
+		t.bests = &bests;
+		t.bestErrors = &bestErrors;
+		t.cuts = cuts;
+		infos[i] = t;
+		cout << t.lnMin << endl;
+		cout << t.lnMax << endl;
+		pthread_create(&threads[i], NULL, &runWeaks, (void *) &infos[i]);
+	}
+	for (int i=0; i<NUMTHREADS; i++) {
+		pthread_join(threads[i], NULL);
+	}
+
+	WeakLearner *minErrLn = bests[0];
+	double minError = bestErrors[0];
+
+	for (int i=0; i<NUMTHREADS; i++) {
+		if (bestErrors[i] < minError) {
+			minError = bestErrors[i];
+			minErrLn = bests[i];
+		}
+	}
+	/*
 	for (int i=0; i<nLns; i++) {
 		//cout << i << endl;cout.flush();
 		WeakLearner &ln = lns[i];
@@ -109,7 +188,7 @@ WeakLearner findWeakLearner(WeakLearner *lns, int nLns, Grid *faces, int nfaces,
 		if (!(i%1000)) {
 			cout << i << " of " << nLns << endl;
 		}
-	}
+	}*/
 	return *minErrLn;
 
 }
@@ -219,7 +298,7 @@ WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
 
 
 int main() {
-	int numImgs = 300;
+	int numImgs = 1;
 	Grid *IMGSFACES = loadImages("../../../asIntFaces.txt", numImgs, 65, 65);
 	cout << IMGSFACES[0][2][2] << endl;
 	Grid *IMGSNONFACES = loadImages("../../../asIntNonFaces.txt", numImgs, 65, 65);
