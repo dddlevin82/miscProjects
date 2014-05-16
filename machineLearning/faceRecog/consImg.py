@@ -15,4 +15,5 @@ for i in range(1, len(imgarr)):
 
 img = Image.fromarray(np.array(nonint))
 img.show()
+#img.save('face.bmp')
 

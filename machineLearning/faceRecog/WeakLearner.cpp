@@ -22,20 +22,23 @@ double WeakLearner::trainOnImgs(Grid *faces, int nfaces, Grid *nonfaces, int nno
 	double nonfaceError;
 	int idxErrMin = -1;
 	double errMin = INT_MAX; //meh
-	//cout << "going to train!" << endl;cout.flush();
+	cout << "going to train!" << endl;cout.flush();
 	for (int i=0; i<nCuts; i++) {
 		double cutCur = cuts[i];
+		cout << "cut is " << cutCur << endl;
 		int numFaceErrors = 0;
 		int numnonFaceErrors = 0;
 		faceError = 0;
 		nonfaceError = 0;
 		for (int j=0; j<nfaces; j++) {
+			cout << "       face" << endl;
 			if (!evalImgTrain(faces[j], cutCur)) {
 				faceError += faceWeights[j];
 				numFaceErrors ++;
 			}
 		}
 		for (int j=0; j<nnonfaces; j++) {
+			cout << "       non face" << endl;
 			if (evalImgTrain(nonfaces[j], cutCur)) {
 				nonfaceError += nonfaceWeights[j];	
 				numnonFaceErrors ++;
@@ -79,6 +82,7 @@ pair<vector<double>, vector<double> > WeakLearner::yieldErrors(Grid *faces, int 
 			faceErrors.push_back(0);
 		}
 	}
+	
 	for (int i=0; i<nnonfaces; i++) {
 		if (evalImgTrain(nonfaces[i], cut)) {
 			nonfaceErrors.push_back(1);
@@ -86,20 +90,20 @@ pair<vector<double>, vector<double> > WeakLearner::yieldErrors(Grid *faces, int 
 			nonfaceErrors.push_back(0);
 		}
 	}
+
 	return make_pair(faceErrors, nonfaceErrors);
 }
 
 bool WeakLearner::evalImgTrain(Grid &img, double curCut) {
+	cout << "evaling img train " << endl;
 	double nr = img.nr;
 	double nc = img.nc;
 	int rImin = nr * rmin + .5; //.5 to round
 	int rImax = nr * rmax + .5;
 	int cImin = nc * cmin + .5;
 	int cImax = nc * cmax + .5;
-	//if (spew) {
-	//	cout << rImin << ", " << rImax << ", " << cImin << ", " << cImax << endl;
-	//}
-	double normFact = (rImax - rImin) * (cImax - cImax);
+	cout << "outside of haar " << rImin << ", " << rImax << ", " << cImin << ", " << cImax << endl;
+	double normFact = (rImax - rImin) * (cImax - cImin);
 	return p * haar(img, rImin, rImax, cImin, cImax) / normFact < p * curCut;
 }
 
