@@ -7,14 +7,14 @@ double getIntense(Grid &img, int rmin, int rmax, int cmin, int cmax) {
 
 
 double haarTwoHoriz(Grid &img, int rmin, int rmax, int cmin, int cmax) {
-	int rcut = ((double) rmin + rmin) / 2 + .5;
+	int rcut = ((double) rmin + rmax) / 2 + .5;
 	double iA = getIntense(img, rcut, rmax, cmin, cmax);
 	double iB = getIntense(img, rmin, rcut, cmin, cmax);
 	return iA - iB;
 }
 
 double haarTwoVert(Grid &img, int rmin, int rmax, int cmin, int cmax) {
-	int ccut = ((double) cmin + cmin) / 2 + .5;
+	int ccut = ((double) cmin + cmax) / 2 + .5;
 	double iA = getIntense(img, rmin, rmax, ccut, cmax);
 	double iB = getIntense(img, rmin, rmax, cmin, ccut);
 	return iA - iB;

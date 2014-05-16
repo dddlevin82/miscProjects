@@ -33,6 +33,8 @@ class Grid {
 			return zss[r];
 		}
 		~Grid() { 
+			cout << "DESTROYING" << endl;
+			cout << "and zero is " << zss[0][0] << endl;
 			free(cs);
 			free(rs);
 			free(zss);
@@ -57,9 +59,11 @@ class Grid {
 			this->rs = (double *) malloc(this->nr * sizeof(double));
 			this->zss = (double **) malloc(this->nr * sizeof(double *));
 			this->rawZs = (double *) malloc(this->nc * this->nr * sizeof(double));
+			for (unsigned int i=0; i<this->nr; i++) {
+				zss[i] = &this->rawZs[i * this->nc];
+			}	
 			memcpy(this->cs, other.cs, this->nc);
 			memcpy(this->rs, other.rs, this->nr);
-			memcpy(this->zss, other.zss, this->nc);
 			memcpy(this->rawZs, other.rawZs, this->nc * this->nr);
 		};
 		Grid operator=(Grid &&other) {
@@ -68,6 +72,7 @@ class Grid {
 			this->cs = other.cs;
 			this->rs = other.rs;
 			this->rawZs = other.rawZs;
+
 			this->zss = other.zss;
 			other.cs = NULL;
 			other.rs = NULL;
@@ -76,15 +81,18 @@ class Grid {
 			return *this;
 		}
 		Grid operator=(Grid &other) {
+			cout << "in equal" << endl;
 			this->nc = other.nc;
 			this->nr = other.nr;
 			this->cs = (double *) malloc(this->nc * sizeof(double));
 			this->rs = (double *) malloc(this->nr * sizeof(double));
 			this->zss = (double **) malloc(this->nr * sizeof(double *));
 			this->rawZs = (double *) malloc(this->nc * this->nr * sizeof(double));
+			for (unsigned int i=0; i<this->nr; i++) {
+				zss[i] = &this->rawZs[i * this->nc];
+			}	
 			memcpy(this->cs, other.cs, this->nc);
 			memcpy(this->rs, other.rs, this->nr);
-			memcpy(this->zss, other.zss, this->nc);
 			memcpy(this->rawZs, other.rawZs, this->nc * this->nr);
 			return *this;
 		}

@@ -18,6 +18,7 @@ double WeakLearner::trainOnImgs(Grid *faces, int nfaces, Grid *nonfaces, int nno
 	double nonfaceError;
 	int idxErrMin = -1;
 	double errMin = INT_MAX; //meh
+	//cout << "going to train!" << endl;cout.flush();
 	for (unsigned int i=0, ii=cuts.size(); i<ii; i++) {
 		double cutCur = cuts[i];
 		int numFaceErrors = 0;
@@ -45,6 +46,19 @@ double WeakLearner::trainOnImgs(Grid *faces, int nfaces, Grid *nonfaces, int nno
 	}
 	cut = cuts[idxErrMin];
 	return errMin;
+}
+
+void WeakLearner::print() {
+	cout << "printing weak learner"<<endl;
+	cout << "r goes " << rmin << " to " << rmax << endl;
+	cout << "c goes " <<  cmin << " to " << cmax << endl;
+	if (haar == &haarTwoHoriz) {
+		cout << "am horizontal" << endl;
+	} else if (haar == &haarTwoVert) {
+		cout << "am vertical " << endl;
+	} else {
+		cout << "am undef" << endl;
+	}
 }
 
 pair<vector<double>, vector<double> > WeakLearner::yieldErrors(Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces) {
@@ -76,6 +90,9 @@ bool WeakLearner::evalImgTrain(Grid &img, double curCut) {
 	int rImax = nr * rmax + .5;
 	int cImin = nc * cmin + .5;
 	int cImax = nc * cmax + .5;
+	//if (spew) {
+	//	cout << rImin << ", " << rImax << ", " << cImin << ", " << cImax << endl;
+	//}
 	double normFact = (rImax - rImin) * (cImax - cImax);
 	return p * haar(img, rImin, rImax, cImin, cImax) / normFact < p * curCut;
 }

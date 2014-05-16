@@ -7,6 +7,9 @@
 #include <sstream>
 #include <string>
 #define NUMCOLS 1000
+
+bool spew = false;
+
 double dotProd(vector<double> &xs, double *ys) { //gaaah so ugly
 	double sum = 0;
 	for (unsigned int i=0, ii=xs.size(); i<ii; i++) {
@@ -37,6 +40,7 @@ Grid *loadImages(string fn, int n, int numRow, int numCol) {
 		string s = string(line);
 		
 		if (s.find("END") != string::npos) {
+			
 			imgs[idx] = g;
 			if (idx == n-1) {
 				break;
@@ -95,26 +99,25 @@ WeakLearner findWeakLearner(WeakLearner *lns, int nLns, Grid *faces, int nfaces,
 	WeakLearner *minErrLn;
 	for (int i=0; i<nLns; i++) {
 		WeakLearner &ln = lns[i];
+		if (i==1351) {
+			spew = true;
+		}
 		double thisErr = ln.trainOnImgs(faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights, cuts);
 		if (thisErr < minErr) {
 			minErr = thisErr;
 			minErrLn = &ln;
+		}
+		if (!(i%1000)) {
+			cout << i << " of " << nLns << endl;
 		}
 	}
 	return *minErrLn;
 
 }
 
-StrongLearner findStrongLearner(vector<StrongLearner> &strongs, WeakLearner *lns, int nLns, WeakLearner *lnsSparse, int nlnsSparse, Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces, int howmany) {
+StrongLearner findStrongLearner(WeakLearner *lns, int nLns, WeakLearner *lnsSparse, int nlnsSparse, Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces, int howmany) {
 	vector<WeakLearner> selected;
-	if (strongs.size()) {
-		StrongLearner &last = strongs[strongs.size()-1];
-		
-		for (unsigned int i=0; i<last.weakLearners.size(); i++) {
-			selected.push_back(last.weakLearners[i]);
 
-		}
-	}
 	int totalItems = nfaces + nnonfaces;
 	double fw = (double) nfaces / totalItems;
 	double nfw = (double) nnonfaces / totalItems;
@@ -127,13 +130,18 @@ StrongLearner findStrongLearner(vector<StrongLearner> &strongs, WeakLearner *lns
 	for (int i=0; i<nnonfaces; i++) {
 		nonfaceWeights[i] = nfw;
 	}
-	for (int i=selected.size(); i<howmany; i++) {
+	for (int i=0; i<howmany; i++) {
+		cout << "going to find weak" << endl;cout.flush();
 		WeakLearner l = findWeakLearner(lnsSparse, nlnsSparse, faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights);
 		if ((l.faceErrors + l.nonfaceErrors) / (double) (nfaces + nnonfaces) >= 0.5) {
+			cout << "frac right is "  << (l.faceErrors + l.nonfaceErrors) / (double) (nfaces + nnonfaces)  << ", moving to dense " << endl;
 			l = findWeakLearner(lns, nLns, faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights);
+			cout << "did dense" << endl;
 			if ((l.faceErrors + l.nonfaceErrors) / (double) (nfaces + nnonfaces) >= 0.5) {
 				cout << "OMG DIVERGENCE" << endl;
 			}
+		} else {
+			cout << "success with sparse" << endl;
 		}
 		selected.push_back(l);
 		updateWeights(selected[selected.size()-1], faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights);
@@ -147,7 +155,8 @@ StrongLearner findStrongLearner(vector<StrongLearner> &strongs, WeakLearner *lns
 WeakLearner *realloc(WeakLearner *lns, int *curNum, int idx) {
 	*curNum = *curNum + fmin(*curNum, 1000000);
 	WeakLearner *newLns = (WeakLearner *) malloc(*curNum * sizeof(WeakLearner));
-	memcpy(newLns, lns, idx+1);
+
+	memcpy(newLns, lns, sizeof(WeakLearner) * (idx+1));
 	free(lns);
 	return newLns;
 }
@@ -174,8 +183,8 @@ WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
 					double cMaxFrac = (c + numCols) / fnc;
 					double rMinFrac = r / fnr;
 					double rMaxFrac = (r + numRows) / fnr;
-					lns[idx] = WeakLearner(&haarTwoHoriz, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac);
-					lns[idx+1] = WeakLearner(&haarTwoHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac);
+					lns[idx] = WeakLearner(&haarTwoVert, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac);
+					lns[idx+1] = WeakLearner(&haarTwoVert, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac);
 					idx += 2;
 				}
 			}
@@ -213,17 +222,22 @@ WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
 int main() {
 	int numImgs = 1;
 	Grid *IMGSFACES = loadImages("../../../asIntFaces.txt", numImgs, 65, 65);
+	cout << IMGSFACES[0][2][2] << endl;
 	Grid *IMGSNONFACES = loadImages("../../../asIntNonFaces.txt", numImgs, 65, 65);
 	int numWeaks;
 	int numWeaksSparse;
 	WeakLearner *lns = assembleWeaks(IMGSFACES[0].nr, IMGSFACES[0].nc, &numWeaks, 1);
 	WeakLearner *lnsSparse = assembleWeaks(IMGSFACES[0].nr , IMGSFACES[0].nc, &numWeaksSparse, 3);
+	cout << IMGSFACES[0][2][2] << endl;
 	cout << "dense -> " << numWeaks << endl;
 	cout << "sparse -> " << numWeaksSparse << endl;
-	vector<int> numLearners = {1, 3, 5};
-	vector<StrongLearner> strongs;
-	for (unsigned int i=0; i<numLearners.size(); i++) {
-		strongs.push_back(findStrongLearner(strongs, lns, numWeaks, lnsSparse, numWeaksSparse, IMGSFACES, numImgs, IMGSNONFACES, numImgs, numLearners[i]));
-	}
+	vector<int> numLearners = {1};
+	lnsSparse[6].print();
+	lnsSparse = lnsSparse + 6;
+	cout << "da num " << endl;
+	cout << 1351 << endl;
+	lnsSparse[1350].print();
+	StrongLearner s = findStrongLearner(lns, numWeaks, lnsSparse, numWeaksSparse, IMGSFACES, numImgs, IMGSNONFACES, numImgs, numLearners[numLearners.size()-1]);
+	s.weakLearners[0].print();	
 	return 0;
 }
