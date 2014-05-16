@@ -11,6 +11,7 @@ class WeakLearner {
 		double (*haar) (Grid &, int, int, int, int);
 		int p;
 		WeakLearner(double (*haarArg) (Grid &, int, int, int, int), int, double, double, double, double, vector<double>);
+		WeakLearner(double args[9]);
 		double cut;
 		double rmin;
 		double rmax;

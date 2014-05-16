@@ -16,7 +16,42 @@ WeakLearner::WeakLearner(double (*haarArg) (Grid &, int, int, int, int), int p_,
 	}
 
 }
-		
+
+WeakLearner::WeakLearner(double args[9]) {
+		if (haar == &haarTwoHoriz) {
+		funcId = 1;
+	} else if (haar == &haarTwoVert) {
+		funcId = 2;
+	} else if (haar == &haarThreeHoriz) {
+		funcId = 3;
+	} else if (haar == &haarThreeVert) {
+		funcId = 4;
+	} else if (haar == &haarFour) {
+		funcId = 5;
+	}
+	ss << rmin << " " << rmax << " " << cmin << " " << cmax << " " << p << " " << cut << " " <<  weight << " " << sumErr << " " << funcId;
+	rmin = args[0];
+	rmax = args[1];
+	cmin = args[2];
+	cmax = args[3];
+	p = (int) args[4];
+	cut = args[5];
+	weight = args[6];
+	sumErr = args[7];
+	int fId = args[8];
+	if (fId == 1) {
+		haar = &haarTwoHoriz;
+	} else if (fId == 2) {
+		haar = &haarTwoVert;
+	} else if (fId == 3) {
+		haar = &haarThreeHoriz;
+	} else if (fId == 4) {
+		haar = &haarThreeVert;
+	} else if (fId == 5) {
+		haar = haarFour;
+	}
+}
+
 double WeakLearner::trainOnImgs(Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces, double *faceWeights, double *nonfaceWeights) {
 	double faceError;
 	double nonfaceError;

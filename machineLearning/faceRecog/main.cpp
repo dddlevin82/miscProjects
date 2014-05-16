@@ -7,8 +7,9 @@
 #include "math.h"
 #include <sstream>
 #include <string>
-#define NUMCOLS 1000
+#define NUMCOLS 30000 //1000
 #define NUMTHREADS 8 
+
 bool spew = false;
 
 double dotProd(vector<double> &xs, double *ys) { //gaaah so ugly
@@ -387,7 +388,7 @@ WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
 }
 
 
-int main() {
+void train() {
 	int numImgs = 1000;
 	Grid *IMGSFACES = loadImages("../../../asIntFaces.txt", numImgs, 65, 65);
 	Grid *IMGSNONFACES = loadImages("../../../asIntNonFaces.txt", numImgs, 65, 65);
@@ -403,5 +404,47 @@ int main() {
 	}
 
 	fclose(f);
+}
+
+
+vector<WeakLearner> loadWeaks(string fn, int *nWeaks) {
+	FILE *f = fopen(fn.c_str(), "rt");
+	char line[200];
+	vector<WeakLearner> lns;
+	while (fgets(line, 200, f) != NULL) {
+		string s = string(line);
+		double vals[9];
+		int numVals = 0;
+		stringstream ss(s);
+		double tmp;
+		while (ss>>tmp) {
+			vals[numVals] = tmp;
+			numVals++;
+		}
+		if (numVals == 9) {
+			lns.push_back(WeakLearner(vals));
+		}
+	}
+	fclose(f);
+	return lns;
+
+
+}
+
+
+
+
+
+void test() {
+	Grid *CLASS = loadImages("../../../asIntClass.txt", 1, 1280, 1600);
+	int nWeaks;
+	vector<WeakLearner> weaks = loadWeaks("fileName.txt", &nWeaks);
+}
+
+
+
+int main() {
+	//train();
+	test();
 	return 0;
 }
