@@ -33,8 +33,6 @@ class Grid {
 			return zss[r];
 		}
 		~Grid() { 
-			cout << "DESTROYING" << endl;
-			cout << "and zero is " << zss[0][0] << endl;
 			free(cs);
 			free(rs);
 			free(zss);
@@ -81,7 +79,6 @@ class Grid {
 			return *this;
 		}
 		Grid operator=(Grid &other) {
-			cout << "in equal" << endl;
 			this->nc = other.nc;
 			this->nr = other.nr;
 			this->cs = (double *) malloc(this->nc * sizeof(double));

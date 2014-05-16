@@ -99,16 +99,14 @@ WeakLearner findWeakLearner(WeakLearner *lns, int nLns, Grid *faces, int nfaces,
 	WeakLearner *minErrLn;
 	for (int i=0; i<nLns; i++) {
 		WeakLearner &ln = lns[i];
-		if (i==1351) {
-			spew = true;
-		}
+
 		double thisErr = ln.trainOnImgs(faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights, cuts);
 		if (thisErr < minErr) {
 			minErr = thisErr;
 			minErrLn = &ln;
 		}
 		if (!(i%1000)) {
-			cout << i << " of " << nLns << endl;
+	//		cout << i << " of " << nLns << endl;
 		}
 	}
 	return *minErrLn;
@@ -151,7 +149,7 @@ StrongLearner findStrongLearner(WeakLearner *lns, int nLns, WeakLearner *lnsSpar
 	free(nonfaceWeights);
 	return s;
 }
-
+/*
 WeakLearner *realloc(WeakLearner *lns, int *curNum, int idx) {
 	*curNum = *curNum + fmin(*curNum, 1000000);
 	WeakLearner *newLns = (WeakLearner *) malloc(*curNum * sizeof(WeakLearner));
@@ -160,11 +158,9 @@ WeakLearner *realloc(WeakLearner *lns, int *curNum, int idx) {
 	free(lns);
 	return newLns;
 }
-
+*/
 WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
-	int curNum = 100000;
-	WeakLearner *lns = (WeakLearner *) malloc(curNum * sizeof(WeakLearner));
-	int idx = 0;
+	vector<WeakLearner> lns;
 	double fnr = nr;
 	double fnc = nc;
 	int dubstep = 2*step;
@@ -173,9 +169,7 @@ WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
 			int c = 0;
 			int cc = nc - numCols;
 			int rr = nr - numRows;
-			if (idx + 2 * rr * cc >= curNum) {
-				lns = realloc(lns, &curNum, idx);
-			}
+
 			for (; c<cc; c+=step) {
 				int r = 0;
 				for (; r<rr; r+=step) {
@@ -183,9 +177,8 @@ WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
 					double cMaxFrac = (c + numCols) / fnc;
 					double rMinFrac = r / fnr;
 					double rMaxFrac = (r + numRows) / fnr;
-					lns[idx] = WeakLearner(&haarTwoVert, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac);
-					lns[idx+1] = WeakLearner(&haarTwoVert, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac);
-					idx += 2;
+					lns.push_back(WeakLearner(&haarTwoVert, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac));
+					lns.push_back(WeakLearner(&haarTwoVert, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac));
 				}
 			}
 		}
@@ -196,9 +189,7 @@ WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
 			int c = 0;
 			int cc = nc - numCols;
 			int rr = nr - numRows;
-			if (idx + 2 * rr * cc >= curNum) {
-				lns = realloc(lns, &curNum, idx);
-			}
+
 			for (; c<cc; c+=step) {
 				int r = 0;
 				for (; r<rr; r+=step) {
@@ -206,16 +197,25 @@ WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
 					double cMaxFrac = (c + numCols) / fnc;
 					double rMinFrac = r / fnr;
 					double rMaxFrac = (r + numRows) / fnr;
-					lns[idx] = WeakLearner(&haarTwoHoriz, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac);
-					lns[idx+1] = WeakLearner(&haarTwoHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac);
-					idx += 2;
+					lns.push_back(WeakLearner(&haarTwoHoriz, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac));
+					lns.push_back(WeakLearner(&haarTwoHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac));
 				}
 			}
 		}
 	
 	}
-	*numLearners = idx;
-	return lns;
+	WeakLearner *lnsArr = (WeakLearner *) malloc(lns.size() * sizeof(WeakLearner));
+	for (unsigned int i=0,ii=lns.size(); i<ii; i++) {
+
+		lnsArr[i] = lns[i]; //loool		
+		if (i==122446) {
+			cout << "hem" << endl;
+			lns[i].print();
+			lnsArr[i].print();
+		}
+	}
+	*numLearners = lns.size();
+	return lnsArr;
 }
 
 
@@ -232,12 +232,10 @@ int main() {
 	cout << "dense -> " << numWeaks << endl;
 	cout << "sparse -> " << numWeaksSparse << endl;
 	vector<int> numLearners = {1};
-	lnsSparse[6].print();
-	lnsSparse = lnsSparse + 6;
 	cout << "da num " << endl;
 	cout << 1351 << endl;
-	lnsSparse[1350].print();
-	StrongLearner s = findStrongLearner(lns, numWeaks, lnsSparse, numWeaksSparse, IMGSFACES, numImgs, IMGSNONFACES, numImgs, numLearners[numLearners.size()-1]);
-	s.weakLearners[0].print();	
+	lnsSparse[122445].print();
+	//StrongLearner s = findStrongLearner(lns, numWeaks, lnsSparse, numWeaksSparse, IMGSFACES, numImgs, IMGSNONFACES, numImgs, numLearners[numLearners.size()-1]);
+	//s.weakLearners[0].print();	
 	return 0;
 }
