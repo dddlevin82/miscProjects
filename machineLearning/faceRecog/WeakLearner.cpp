@@ -52,6 +52,24 @@ double WeakLearner::trainOnImgs(Grid *faces, int nfaces, Grid *nonfaces, int nno
 	return errMin;
 }
 
+string WeakLearner::forOutput() {
+	stringstream ss;
+	int funcId = 0;
+	if (haar == &haarTwoHoriz) {
+		funcId = 1;
+	} else if (haar == &haarTwoVert) {
+		funcId = 2;
+	} else if (haar == &haarThreeHoriz) {
+		funcId = 3;
+	} else if (haar == &haarThreeVert) {
+		funcId = 4;
+	} else if (haar == &haarFour) {
+		funcId = 5;
+	}
+	ss << rmin << " " << rmax << " " << cmin << " " << cmax << " " << p << " " << cut << " " <<  weight << " " << sumErr << " " << funcId;
+	return ss.str();
+}
+
 void WeakLearner::print() {
 	cout << "printing weak learner"<<endl;
 	cout << "r goes " << rmin << " to " << rmax << endl;
@@ -62,8 +80,12 @@ void WeakLearner::print() {
 		cout << "am horizontal" << endl;
 	} else if (haar == &haarTwoVert) {
 		cout << "am vertical " << endl;
-	} else {
-		cout << "am undef" << endl;
+	} else if (haar == &haarThreeHoriz) {
+		cout << "am three horiz " << endl;
+	} else if (haar == &haarThreeVert) {
+		cout << "am three vert" << endl;
+	} else if (haar == &haarFour) {
+		cout << "am four" << endl;
 	}
 }
 

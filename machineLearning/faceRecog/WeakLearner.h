@@ -4,6 +4,7 @@
 #include <utility>
 #include <climits>
 #include "haar.h"
+#include <sstream>
 #include "Grid.h"
 class WeakLearner {
 	public:
@@ -20,7 +21,9 @@ class WeakLearner {
 		double weight;
 		int faceErrors;
 		int nonfaceErrors;
+		double sumErr;
 		void print();
+		string forOutput();
 		double trainOnImgs(Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces, double *faceWeights, double *nonfaceWeights);
 		pair<vector<double>, vector<double> > yieldErrors(Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces);
 		bool evalImgTrain(Grid &img, double cut);

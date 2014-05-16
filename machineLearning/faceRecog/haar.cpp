@@ -40,7 +40,7 @@ double haarThreeVert(Grid &img, int rmin, int rmax, int cmin, int cmax) {
 }
 
 
-double haarFour(img, int rmin, int rmax, int cmin, int cmax) {
+double haarFour(Grid &img, int rmin, int rmax, int cmin, int cmax) {
 	int rcut = rmin + .5 * (rmax - rmin) + .5;
 	int ccut = cmin + .5 * (cmax - cmin) + .5;
 	double iA = getIntense(img, rmin, rcut, cmin, ccut);
