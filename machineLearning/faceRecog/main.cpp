@@ -8,7 +8,7 @@
 #include <sstream>
 #include <string>
 #define NUMCOLS 1000
-#define NUMTHREADS 4 
+#define NUMTHREADS 8 
 bool spew = false;
 
 double dotProd(vector<double> &xs, double *ys) { //gaaah so ugly
@@ -121,7 +121,7 @@ void *runWeaks(void *arg) {
 	WeakLearner *best;
 	for (int i=t.lnMin; i<t.lnMax; i++) {
 		
-		if (!(i%1000)) {
+		if (!(i%10000)) {
 			cout << i << " of " << t.nLns << endl;
 		}
 		double thisErr = t.lns[i].trainOnImgs(t.faces, t.nfaces, t.nonfaces, t.nnonfaces, t.faceWeights, t.nonfaceWeights);
@@ -206,9 +206,8 @@ StrongLearner findStrongLearner(WeakLearner *lns, int nLns, WeakLearner *lnsSpar
 		nonfaceWeights[i] = nfw;
 	}
 	for (int i=0; i<howmany; i++) {
-		cout << "going to find weak" << endl;cout.flush();
 		WeakLearner l = findWeakLearner(lnsSparse, nlnsSparse, faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights);
-		/*
+		
 		if ((l.faceErrors + l.nonfaceErrors) / (double) (nfaces + nnonfaces) >= 0.5) {
 			cout << "frac right is "  << (l.faceErrors + l.nonfaceErrors) / (double) (nfaces + nnonfaces)  << ", moving to dense " << endl;
 			l = findWeakLearner(lns, nLns, faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights);
@@ -218,7 +217,7 @@ StrongLearner findStrongLearner(WeakLearner *lns, int nLns, WeakLearner *lnsSpar
 			}
 		} else {
 			cout << "success with sparse" << endl;
-		}*/
+		}
 		selected.push_back(l);
 		updateWeights(selected[selected.size()-1], faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights);
 	}
@@ -298,19 +297,19 @@ WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
 
 
 int main() {
-	int numImgs = 1;
+	int numImgs = 150;
 	Grid *IMGSFACES = loadImages("../../../asIntFaces.txt", numImgs, 65, 65);
 	Grid *IMGSNONFACES = loadImages("../../../asIntNonFaces.txt", numImgs, 65, 65);
 	int numWeaks;
 	int numWeaksSparse;
-//	WeakLearner *lns = assembleWeaks(IMGSFACES[0].nr, IMGSFACES[0].nc, &numWeaks, 1);
-//	WeakLearner *lnsSparse = assembleWeaks(IMGSFACES[0].nr , IMGSFACES[0].nc, &numWeaksSparse, 1);
-	WeakLearner *myWk = (WeakLearner *) malloc(sizeof(WeakLearner));
-	vector<double> cuts = {0, .1, .2, .3, .4, .5};
-	myWk[0] = WeakLearner(haarTwoHoriz, -1, 0, .1875, .046, .86, cuts);
+	WeakLearner *lns = assembleWeaks(IMGSFACES[0].nr, IMGSFACES[0].nc, &numWeaks, 1);
+	WeakLearner *lnsSparse = assembleWeaks(IMGSFACES[0].nr , IMGSFACES[0].nc, &numWeaksSparse, 1);
+	//WeakLearner *myWk = (WeakLearner *) malloc(sizeof(WeakLearner));
+	//vector<double> cuts = {0, .1, .2, .3, .4, .5};
+	//myWk[0] = WeakLearner(haarTwoHoriz, -1, 0, .1875, .046, .86, cuts);
 	vector<int> numLearners = {1};
-	StrongLearner s = findStrongLearner(myWk, 1, myWk, 1, IMGSFACES, numImgs, IMGSNONFACES, numImgs, numLearners[numLearners.size()-1]);
-	//StrongLearner s = findStrongLearner(lns, numWeaks, lnsSparse, numWeaksSparse, IMGSFACES, numImgs, IMGSNONFACES, numImgs, numLearners[numLearners.size()-1]);
-	//s.weakLearners[0].print();	
+	//StrongLearner s = findStrongLearner(myWk, 1, myWk, 1, IMGSFACES, numImgs, IMGSNONFACES, numImgs, numLearners[numLearners.size()-1]);
+	StrongLearner s = findStrongLearner(lns, numWeaks, lnsSparse, numWeaksSparse, IMGSFACES, numImgs, IMGSNONFACES, numImgs, numLearners[numLearners.size()-1]);
+	s.weakLearners[0].print();	
 	return 0;
 }

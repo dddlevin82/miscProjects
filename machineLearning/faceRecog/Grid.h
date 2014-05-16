@@ -79,7 +79,6 @@ class Grid {
 			return *this;
 		}
 		Grid operator=(Grid &other) {
-			cout << "equals" << endl;
 			this->nc = other.nc;
 			this->nr = other.nr;
 			this->cs = (double *) malloc(this->nc * sizeof(double));

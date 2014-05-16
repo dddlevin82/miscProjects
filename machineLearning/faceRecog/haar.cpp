@@ -8,10 +8,8 @@ double getIntense(Grid &img, int rmin, int rmax, int cmin, int cmax) {
 
 double haarTwoHoriz(Grid &img, int rmin, int rmax, int cmin, int cmax) {
 	int rcut = ((double) rmin + rmax) / 2 + .5;
-	cout << "in haar " << rmin << ", " << rcut << ", " << rmax << ", " << cmin << ", " << cmax << endl;
 	double iA = getIntense(img, rmin, rcut, cmin, cmax);
 	double iB = getIntense(img, rcut, rmax, cmin, cmax);
-	cout << "iA " << iA << ", iB " << iB << endl;
 	return iA - iB;
 }
 

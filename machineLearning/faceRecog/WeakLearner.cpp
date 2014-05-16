@@ -22,23 +22,20 @@ double WeakLearner::trainOnImgs(Grid *faces, int nfaces, Grid *nonfaces, int nno
 	double nonfaceError;
 	int idxErrMin = -1;
 	double errMin = INT_MAX; //meh
-	cout << "going to train!" << endl;cout.flush();
+	//cout << "going to train!" << endl;cout.flush();
 	for (int i=0; i<nCuts; i++) {
 		double cutCur = cuts[i];
-		cout << "cut is " << cutCur << endl;
 		int numFaceErrors = 0;
 		int numnonFaceErrors = 0;
 		faceError = 0;
 		nonfaceError = 0;
 		for (int j=0; j<nfaces; j++) {
-			cout << "       face" << endl;
 			if (!evalImgTrain(faces[j], cutCur)) {
 				faceError += faceWeights[j];
 				numFaceErrors ++;
 			}
 		}
 		for (int j=0; j<nnonfaces; j++) {
-			cout << "       non face" << endl;
 			if (evalImgTrain(nonfaces[j], cutCur)) {
 				nonfaceError += nonfaceWeights[j];	
 				numnonFaceErrors ++;
@@ -95,7 +92,6 @@ pair<vector<double>, vector<double> > WeakLearner::yieldErrors(Grid *faces, int 
 }
 
 bool WeakLearner::evalImgTrain(Grid &img, double curCut) {
-	cout << "evaling img train " << endl;
 	double nr = img.nr;
 	double nc = img.nc;
 	int rImin = nr * rmin + .5; //.5 to round
