@@ -1,7 +1,7 @@
 #include "WeakLearner.h"
 
 
-WeakLearner::WeakLearner(double (*haarArg) (Grid &, int, int, int, int), int p_, double rmin_, double rmax_, double cmin_, double cmax_) {
+WeakLearner::WeakLearner(double (*haarArg) (Grid &, int, int, int, int), int p_, double rmin_, double rmax_, double cmin_, double cmax_, vector<double> cuts_) {
 	haar = haarArg;
 	p = p_;
 	rmin = rmin_;
@@ -10,16 +10,20 @@ WeakLearner::WeakLearner(double (*haarArg) (Grid &, int, int, int, int), int p_,
 	cmax = cmax_;
 	cut = 0;
 	weight = 0;
+	nCuts = cuts_.size();
+	for (unsigned int i=0, ii=cuts_.size(); i<ii; i++) {
+		cuts[i] = cuts_[i];
+	}
 
 }
 		
-double WeakLearner::trainOnImgs(Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces, double *faceWeights, double *nonfaceWeights, vector<double> cuts) {
+double WeakLearner::trainOnImgs(Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces, double *faceWeights, double *nonfaceWeights) {
 	double faceError;
 	double nonfaceError;
 	int idxErrMin = -1;
 	double errMin = INT_MAX; //meh
 	//cout << "going to train!" << endl;cout.flush();
-	for (unsigned int i=0, ii=cuts.size(); i<ii; i++) {
+	for (int i=0; i<nCuts; i++) {
 		double cutCur = cuts[i];
 		int numFaceErrors = 0;
 		int numnonFaceErrors = 0;

@@ -108,7 +108,6 @@ struct thread_info {
 	int tid;
 	WeakLearner *(*bests)[NUMTHREADS];
 	double (*bestErrors)[NUMTHREADS];
-	vector<double> cuts;
 };
 
 
@@ -122,7 +121,7 @@ void *runWeaks(void *arg) {
 		if (!(i%1000)) {
 			cout << i << " of " << t.nLns << endl;
 		}
-		double thisErr = t.lns[i].trainOnImgs(t.faces, t.nfaces, t.nonfaces, t.nnonfaces, t.faceWeights, t.nonfaceWeights, t.cuts);
+		double thisErr = t.lns[i].trainOnImgs(t.faces, t.nfaces, t.nonfaces, t.nnonfaces, t.faceWeights, t.nonfaceWeights);
 		if (thisErr < minErr) {
 			minErr = thisErr;
 			best = &t.lns[i];
@@ -136,7 +135,6 @@ void *runWeaks(void *arg) {
 
 
 WeakLearner findWeakLearner(WeakLearner *lns, int nLns, Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces, double *faceWeights, double *nonfaceWeights) {
-	vector<double> cuts = {-.5, -.4, -.3, -.2, -.1, 0, .1, .2, .3, .4, .5};
 	thread_info infos[NUMTHREADS];
 	WeakLearner *bests[NUMTHREADS];
 	double bestErrors[NUMTHREADS];
@@ -156,7 +154,6 @@ WeakLearner findWeakLearner(WeakLearner *lns, int nLns, Grid *faces, int nfaces,
 		t.tid = i;
 		t.bests = &bests;
 		t.bestErrors = &bestErrors;
-		t.cuts = cuts;
 		infos[i] = t;
 		cout << t.lnMin << endl;
 		cout << t.lnMax << endl;
@@ -246,6 +243,8 @@ WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
 	double fnr = nr;
 	double fnc = nc;
 	int dubstep = 2*step;
+	vector<double> negPThetas = {0, .1, .2, .3, .4, .5};
+	vector<double> posPThetas = {-.5, -.4, -.3, -.2, -.1, 0};
 	for (int numCols = 2; numCols<nc+1; numCols+=dubstep) {
 		for (int numRows = 1; numRows<nr+1; numRows+=step) {
 			int c = 0;
@@ -261,8 +260,8 @@ WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
 					double cMaxFrac = (c + numCols) / fnc;
 					double rMinFrac = r / fnr;
 					double rMaxFrac = (r + numRows) / fnr;
-					lns[idx] = WeakLearner(&haarTwoVert, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac);
-					lns[idx+1] = WeakLearner(&haarTwoVert, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac);
+					lns[idx] = WeakLearner(&haarTwoVert, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac, posPThetas);
+					lns[idx+1] = WeakLearner(&haarTwoVert, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac, negPThetas);
 					idx += 2;
 				}
 			}
@@ -284,8 +283,8 @@ WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
 					double cMaxFrac = (c + numCols) / fnc;
 					double rMinFrac = r / fnr;
 					double rMaxFrac = (r + numRows) / fnr;
-					lns[idx] = WeakLearner(&haarTwoHoriz, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac);
-					lns[idx+1] = WeakLearner(&haarTwoHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac);
+					lns[idx] = WeakLearner(&haarTwoHoriz, 1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac, posPThetas);
+					lns[idx+1] = WeakLearner(&haarTwoHoriz, -1, rMinFrac, rMaxFrac, cMinFrac, cMaxFrac, negPThetas);
 					idx += 2;
 				}
 			}
@@ -298,14 +297,14 @@ WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
 
 
 int main() {
-	int numImgs = 300;
+	int numImgs = 250;
 	Grid *IMGSFACES = loadImages("../../../asIntFaces.txt", numImgs, 65, 65);
 	cout << IMGSFACES[0][2][2] << endl;
 	Grid *IMGSNONFACES = loadImages("../../../asIntNonFaces.txt", numImgs, 65, 65);
 	int numWeaks;
 	int numWeaksSparse;
 	WeakLearner *lns = assembleWeaks(IMGSFACES[0].nr, IMGSFACES[0].nc, &numWeaks, 1);
-	WeakLearner *lnsSparse = assembleWeaks(IMGSFACES[0].nr , IMGSFACES[0].nc, &numWeaksSparse, 2);
+	WeakLearner *lnsSparse = assembleWeaks(IMGSFACES[0].nr , IMGSFACES[0].nc, &numWeaksSparse, 1);
 	vector<int> numLearners = {1};
 	StrongLearner s = findStrongLearner(lns, numWeaks, lnsSparse, numWeaksSparse, IMGSFACES, numImgs, IMGSNONFACES, numImgs, numLearners[numLearners.size()-1]);
 	s.weakLearners[0].print();	
