@@ -82,11 +82,11 @@ void updateWeights(WeakLearner &ln, Grid *faces, int nfaces, Grid *nonfaces, int
 	pair<vector<double>, vector<double> > errs = ln.yieldErrors(faces, nfaces, nonfaces, nnonfaces);
 	vector<double> faceErrs = errs.first;
 	vector<double> nonfaceErrs = errs.second;
-	cout << "sum error is " << sumErr << endl;
+	//cout << "sum error is " << sumErr << endl;
 	double beta = sumErr / (1 - sumErr);
-	cout << "beta is " << beta << endl;
-	cout << ln.faceErrors / (double) nfaces << " frac faces wrongs" << endl;
-	cout << ln.nonfaceErrors / (double) nnonfaces << " frac nonfaces wrongs" << endl;
+	//cout << "beta is " << beta << endl;
+	//cout << ln.faceErrors / (double) nfaces << " frac faces wrongs" << endl;
+	//cout << ln.nonfaceErrors / (double) nnonfaces << " frac nonfaces wrongs" << endl;
 	ln.weight = log(1 / beta);
 	for (int i=0; i<nfaces; i++) {
 		if (!faceErrs[i]) {
@@ -143,7 +143,7 @@ void *runWeaks(void *arg) {
 	for (int i=t.lnMin; i<t.lnMax; i++) {
 		
 		if (!(i%100000)) {
-			cout << i << " of " << t.nLns << endl;
+			//cout << i << " of " << t.nLns << endl;
 		}
 		double thisErr = t.lns[i].trainOnImgs(t.faces, t.nfaces, t.nonfaces, t.nnonfaces, t.faceWeights, t.nonfaceWeights);
 		if (thisErr < minErr) {
@@ -222,21 +222,22 @@ StrongLearner findStrongLearner(WeakLearner *lns, int nLns, WeakLearner *lnsSpar
 		WeakLearner l = findWeakLearner(lnsSparse, nlnsSparse, faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights);
 		double sumErr = getSumErr(l, faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights);	
 		if (sumErr >= 0.5) {
-			cout << "frac right is "  << (l.faceErrors + l.nonfaceErrors) / (double) (nfaces + nnonfaces)  << " and sum error is " << sumErr << ", moving to dense " << endl;
+		//	cout << "frac right is "  << (l.faceErrors + l.nonfaceErrors) / (double) (nfaces + nnonfaces)  << " and sum error is " << sumErr << ", moving to dense " << endl;
 			l = findWeakLearner(lns, nLns, faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights);
 
 			sumErr = getSumErr(l, faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights);	
-			cout << "did dense" << endl;
+		//	cout << "did dense" << endl;
 			if (sumErr >= 0.5) {
-				cout << "OMG DIVERGENCE" << endl;
+		//		cout << "OMG DIVERGENCE" << endl;
 			}
 		} else {
-			cout << "success with sparse" << endl;
+		//	cout << "success with sparse" << endl;
 		}
 		l.sumErr = sumErr;
 		selected.push_back(l);
-		cout << "found weak learner " << i << endl;
+		//cout << "found weak learner " << i << endl;
 		updateWeights(selected[selected.size()-1], faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights, sumErr);
+		cout << selected[selected.size()-1].forOutput() << endl;
 		fprintf(f, "%s\n", selected[selected.size()-1].forOutput().c_str());
 	}
 	StrongLearner s = StrongLearner(selected);
@@ -310,7 +311,7 @@ WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
 		}
 	
 	}
-	cout << "assembled two's" << endl;
+	//cout << "assembled two's" << endl;
 	//vertical three's
 	for (int numCols = 3; numCols<=nc; numCols+=tristep) {
 		for (int numRows=1; numRows<=nr; numRows+=step) {
@@ -380,7 +381,7 @@ WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
 			}
 		}
 	}
-	cout << "assembled three's" << endl;
+	//cout << "assembled three's" << endl;
 	*numLearners = idx;
 	return lns;
 }
@@ -398,7 +399,7 @@ int main() {
 	FILE *f = fopen("results.txt", "w");
 	StrongLearner s = findStrongLearner(lns, numWeaks, lnsSparse, numWeaksSparse, IMGSFACES, numImgs, IMGSNONFACES, numImgs, 75, f);
 	for (unsigned int i=0; i<s.weakLearners.size(); i++) {
-		s.weakLearners[i].print();	
+		//s.weakLearners[i].print();	
 	}
 
 	fclose(f);
