@@ -102,7 +102,6 @@ bool WeakLearner::evalImgTrain(Grid &img, double curCut) {
 	int rImax = nr * rmax + .5;
 	int cImin = nc * cmin + .5;
 	int cImax = nc * cmax + .5;
-	cout << "outside of haar " << rImin << ", " << rImax << ", " << cImin << ", " << cImax << endl;
 	double normFact = (rImax - rImin) * (cImax - cImin);
 	return p * haar(img, rImin, rImax, cImin, cImax) / normFact < p * curCut;
 }

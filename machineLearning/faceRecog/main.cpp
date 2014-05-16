@@ -50,30 +50,18 @@ Grid *loadImages(string fn, int n, int numRow, int numCol) {
 			row = 0;
 			idx++;
 		} else {
-		//	cout << "new row" << endl;
-		//	cout << s << endl;
 			stringstream ss(s);
 			double tmp;
 			int col = 0;
 			while (ss>>tmp) {
 				g[row][col] = tmp;			
-		//		cout << tmp << ", ";
 				col++;
 			}
-		//	cout << endl;
-			cout << "finished row " << row << endl;
 			row ++;
 			
 		}
 
 
-	}
-	cout << "face value" << endl;
-	for (int i=0; i<65; i++) {
-		for (int j=0; j<65; j++) {
-			cout << g[i][j] << ", ";
-		}
-		cout << endl;
 	}
 
 	return imgs;	
@@ -312,24 +300,16 @@ WeakLearner *assembleWeaks(int nr, int nc, int *numLearners, int step) {
 int main() {
 	int numImgs = 1;
 	Grid *IMGSFACES = loadImages("../../../asIntFaces.txt", numImgs, 65, 65);
-	//Grid *IMGSNONFACES = loadImages("../../../asIntNonFaces.txt", numImgs, 65, 65);
+	Grid *IMGSNONFACES = loadImages("../../../asIntNonFaces.txt", numImgs, 65, 65);
 	int numWeaks;
 	int numWeaksSparse;
 //	WeakLearner *lns = assembleWeaks(IMGSFACES[0].nr, IMGSFACES[0].nc, &numWeaks, 1);
 //	WeakLearner *lnsSparse = assembleWeaks(IMGSFACES[0].nr , IMGSFACES[0].nc, &numWeaksSparse, 1);
 	WeakLearner *myWk = (WeakLearner *) malloc(sizeof(WeakLearner));
 	vector<double> cuts = {0, .1, .2, .3, .4, .5};
-	myWk[0] = WeakLearner(haarTwoHoriz, -1, 0, .375, .046, .86, cuts);
+	myWk[0] = WeakLearner(haarTwoHoriz, -1, 0, .1875, .046, .86, cuts);
 	vector<int> numLearners = {1};
-	/*
-	cout << "face value" << endl;
-	for (int i=0; i<65; i++) {
-		for (int j=0; j<65; j++) {
-			cout << IMGSFACES[0][i][j] << ", ";
-		}
-		cout << endl;
-	}*/
-	//StrongLearner s = findStrongLearner(myWk, 1, myWk, 1, IMGSFACES, numImgs, IMGSNONFACES, numImgs, numLearners[numLearners.size()-1]);
+	StrongLearner s = findStrongLearner(myWk, 1, myWk, 1, IMGSFACES, numImgs, IMGSNONFACES, numImgs, numLearners[numLearners.size()-1]);
 	//StrongLearner s = findStrongLearner(lns, numWeaks, lnsSparse, numWeaksSparse, IMGSFACES, numImgs, IMGSNONFACES, numImgs, numLearners[numLearners.size()-1]);
 	//s.weakLearners[0].print();	
 	return 0;

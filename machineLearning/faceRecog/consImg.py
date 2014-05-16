@@ -2,7 +2,11 @@ import Image
 import numpy as np
 f = open('../../../asIntFaces.txt', 'r')
 imgarr = []
+i=0
 for l in f.readlines():
+	if i == 1 :
+		print l
+	i+=1
 	if not 'END' in l:
 		imgarr.append(np.array([float(x) for x in l.split()]))
 	else:
