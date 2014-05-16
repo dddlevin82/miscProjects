@@ -42,6 +42,7 @@ Grid *loadImages(string fn, int n, int numRow, int numCol) {
 		
 		if (s.find("END") != string::npos) {
 			
+
 			imgs[idx] = g;
 			if (idx == n-1) {
 				break;
@@ -49,20 +50,32 @@ Grid *loadImages(string fn, int n, int numRow, int numCol) {
 			row = 0;
 			idx++;
 		} else {
-			cout << s << endl;
+		//	cout << "new row" << endl;
+		//	cout << s << endl;
 			stringstream ss(s);
 			double tmp;
 			int col = 0;
 			while (ss>>tmp) {
 				g[row][col] = tmp;			
+		//		cout << tmp << ", ";
 				col++;
 			}
-
+		//	cout << endl;
+			cout << "finished row " << row << endl;
 			row ++;
+			
 		}
 
 
 	}
+	cout << "face value" << endl;
+	for (int i=0; i<65; i++) {
+		for (int j=0; j<65; j++) {
+			cout << g[i][j] << ", ";
+		}
+		cout << endl;
+	}
+
 	return imgs;	
 
 

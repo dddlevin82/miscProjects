@@ -60,9 +60,9 @@ class Grid {
 			for (unsigned int i=0; i<this->nr; i++) {
 				zss[i] = &this->rawZs[i * this->nc];
 			}	
-			memcpy(this->cs, other.cs, this->nc);
-			memcpy(this->rs, other.rs, this->nr);
-			memcpy(this->rawZs, other.rawZs, this->nc * this->nr);
+			memcpy(this->cs, other.cs, this->nc * sizeof(double));
+			memcpy(this->rs, other.rs, this->nr * sizeof(double));
+			memcpy(this->rawZs, other.rawZs, this->nc * this->nr * sizeof(double));
 		};
 		Grid operator=(Grid &&other) {
 			this->nc = other.nc;
@@ -79,6 +79,7 @@ class Grid {
 			return *this;
 		}
 		Grid operator=(Grid &other) {
+			cout << "equals" << endl;
 			this->nc = other.nc;
 			this->nr = other.nr;
 			this->cs = (double *) malloc(this->nc * sizeof(double));
@@ -88,9 +89,9 @@ class Grid {
 			for (unsigned int i=0; i<this->nr; i++) {
 				zss[i] = &this->rawZs[i * this->nc];
 			}	
-			memcpy(this->cs, other.cs, this->nc);
-			memcpy(this->rs, other.rs, this->nr);
-			memcpy(this->rawZs, other.rawZs, this->nc * this->nr);
+			memcpy(this->cs, other.cs, this->nc * sizeof(double));
+			memcpy(this->rs, other.rs, this->nr * sizeof(double));
+			memcpy(this->rawZs, other.rawZs, this->nc * this->nr * sizeof(double));
 			return *this;
 		}
 };
