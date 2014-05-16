@@ -5,6 +5,16 @@ StrongLearner::StrongLearner(vector<WeakLearner> weaks) {
 	normalizeWeights();
 }
 
+StrongLearner::StrongLearner(double args[2], vector<WeakLearner> &weaks) {
+	int numWeaks = args[0];
+	offset = args[1];
+	for (unsigned int i=0; i<weaks.size(); i++) {
+		weakLearners.push_back(weaks[i]);
+	}
+	normalizeWeights();
+}
+
+
 void StrongLearner::normalizeWeights() {
 	double totalWeight = 0;
 	for (unsigned int i=0; i<weakLearners.size(); i++) {
@@ -28,10 +38,16 @@ void StrongLearner::learnOffset(Grid *faces, int nFaces, double maxFalseNegFrac)
 				wrongs++;
 			}
 		}
+	//	cout << "frac wrong " << wrongs/(double)nFaces << " with offset " << curOffset << endl;
+
 		curOffset -= dOffset;
 	}
 	curOffset += dOffset;
 	offset = curOffset;	
+}
+
+void StrongLearner::forOutput() {
+	cout << weakLearners.size() << " " << offset << endl;
 }
 
 bool StrongLearner::evalImgLearn(Grid &face, double curOffset) {

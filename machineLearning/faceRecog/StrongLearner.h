@@ -9,6 +9,8 @@ class StrongLearner {
 		void normalizeWeights();
 		double offset = 0;
 		StrongLearner(vector<WeakLearner>);
+		StrongLearner(double args[2], vector<WeakLearner> &);
+		void forOutput();
 		void learnOffset(Grid *faces, int nFaces, double maxFalseNegFrac);
 		bool evalImgLearn(Grid &face, double curOffset);
 		bool evalImg(Grid &face, int winRow, int winCol, int dWinRow, int dWinCol);

@@ -407,7 +407,7 @@ void train() {
 }
 
 
-vector<WeakLearner> loadWeaks(string fn, int *nWeaks) {
+vector<WeakLearner> loadWeaks(string fn) {
 	FILE *f = fopen(fn.c_str(), "rt");
 	char line[200];
 	vector<WeakLearner> lns;
@@ -432,19 +432,55 @@ vector<WeakLearner> loadWeaks(string fn, int *nWeaks) {
 }
 
 
+void buildStrongLearners() {
+	int nface = 1000;
+	Grid *IMGSFACE = loadImages("../../../asIntFaces.txt", nface, 65, 65);
+	vector<int> weaksPer = {1, 5, 10, 20};
+	vector<WeakLearner> weaks = loadWeaks("nohup.out");
+	vector<StrongLearner> lns;
+	for (unsigned int i=0; i<weaksPer.size(); i++) {
+		vector<WeakLearner> forStr;
+		forStr.insert(forStr.begin(), weaks.begin(), weaks.begin() + weaksPer[i]);
+		StrongLearner s = StrongLearner(forStr);
+		s.learnOffset(IMGSFACE, nface, .02);
+		s.forOutput();
+		
+	}
+}
 
 
-
-void test() {
-	Grid *CLASS = loadImages("../../../asIntClass.txt", 1, 1280, 1600);
-	int nWeaks;
-	vector<WeakLearner> weaks = loadWeaks("fileName.txt", &nWeaks);
+vector<StrongLearner> loadStrongs(string fn, vector<WeakLearner> &weaks) {
+	FILE *f = fopen(fn.c_str(), "rt");
+	char line[200];
+	vector<StrongLearner> strongs;
+	while (fgets(line, 200, f) != NULL) {
+		string s = string(line);
+		double vals[2];
+		int numVals = 0;
+		stringstream ss(s);
+		double tmp;
+		while (ss>>tmp) {
+			vals[numVals] = tmp;
+			numVals++;
+		}
+		if (numVals == 2) {
+			strongs.push_back(StrongLearner(vals, weaks));
+		}
+	}
+	return strongs;
 }
 
 
 
+
+void test() {
+	vector<WeakLearner> weaks = loadWeaks("nohup.out");
+	vector<StrongLearner> strongs = loadStrongs("strongs.txt", weaks);
+}
+
+
 int main() {
 	//train();
-	test();
+	buildStrongLearners();
 	return 0;
 }
