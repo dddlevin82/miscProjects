@@ -25,12 +25,14 @@ WeakLearner::WeakLearner(double args[9]) {
 	cmax = args[3];
 	p = (int) args[4];
 	cut = args[5];
-	
+//.01 originally	
+
 	if (p == -1 && cut == 0) {
 		cut = .01;
 	} else if (p == 1 && cut == 0) {
 		cut = -.01;
 	}
+	
 	weight = args[6];
 	sumErr = args[7];
 	int fId = args[8];
