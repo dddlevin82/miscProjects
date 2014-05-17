@@ -497,7 +497,50 @@ FWindow mergeWindows(FWindow &a, FWindow &b) {
 	return FWindow(rmin, rmax, cmin, cmax);
 }
 
+bool xsOverlap(Vector posA, Vector posB, Vector traceA) {
+	return posA.x <= posB.x && posA.x + traceA.x >= posB.x;
+}
+bool ysOverlap(Vector posA, Vector posB, Vector traceA) {
+	return posA.y <= posB.y && posA.y + traceA.y >= posB.y;
+}
+bool windowsOverlap(FWindow &a, FWindow &b) {
+	return (xsOverlap(a.pos, b.pos, a.trace) || xsOverlap(b.pos, a.pos, b.trace)) && (ysOverlap(a.pos, b.pos, a.trace) || ysOverlap(b.pos, a.pos, b.trace));
+}
 
+FWindow maxOfWindows(vector<FWindow> &wins) {
+	int minX = wins[0].pos.x;
+	int maxX = wins[0].pos.x;
+	int minY = wins[0].pos.y;
+	int maxY = wins[0].pos.y;
+	for (unsigned int i=0, ii=wins.size(); i<ii; i++) {
+		FWindow &a = wins[i];
+		minX = fmin(minX, a.pos.x);
+		maxX = fmax(maxX, a.pos.x + a.trace.x);
+		minY = fmin(minY, a.pos.y);
+		maxY = fmax(maxY, a.pos.y + a.trace.y);
+	}
+	return FWindow(minY, maxY, minX, maxX);
+
+}
+
+
+bool overlapsWithMega(vector<FWindow> &mega, FWindow working) {
+	for (unsigned int i=0; i<mega.size(); i++) {
+		if (windowsOverlap(mega[i], working)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
+vector<FWindow> procMegas(vector<vector<FWindow> > &megas) {
+	vector<FWindow> combd;
+	for (unsigned int i=0; i<megas.size(); i++) {
+		combd.push_back(maxOfWindows(megas[i]));
+	}
+	return combd;
+}
 
 vector<FWindow> combineSubWins(vector<FWindow> subwins) {
 	int numErased = 0;
@@ -505,6 +548,8 @@ vector<FWindow> combineSubWins(vector<FWindow> subwins) {
 		FWindow working = subwins[i];
 		for (int j=i-1; j>=0; j--) {
 			FWindow &test = subwins[j];
+
+			
 			if (working.pos.dist(test.pos) < working.span / 3) {
 				working = mergeWindows(working, test);
 				subwins.erase(subwins.begin() + i);
@@ -515,9 +560,44 @@ vector<FWindow> combineSubWins(vector<FWindow> subwins) {
 				subwins[j] = working;
 				break;
 			}
+			
 
 		}
 	}
+	vector<FWindow> finals;
+	vector<vector<FWindow> > megaWindows;
+	for (int i=(int)subwins.size()-1; i>=0; i--) {
+		FWindow working = subwins[i];
+		bool foundOverlapping = false;
+		for (unsigned int j=0; j<megaWindows.size(); j++) {
+			if (overlapsWithMega(megaWindows[j], working)) {
+				megaWindows[j].push_back(working);
+				foundOverlapping = true;
+				break;
+			}
+
+		}
+		if (!foundOverlapping) {
+			vector<FWindow> mega;
+			mega.push_back(working);
+			megaWindows.push_back(mega);
+		}
+	}
+	return procMegas(megaWindows);
+	/*
+	for (int i=(int)subwins.size()-1; i>=1; i--) {
+		FWindow working = subwins[i];
+		for (int j=i-1; j>=0; j--) {
+			FWindow &test = subwins[j];
+			vector<int> overlaps;	
+			if (windowsOverlap(working, test)) {
+				working = maxOfWindows(working, test);
+				subwins.erase(subwins.begin() + i);
+				subwins[j] = working;
+				break;
+			}
+		}
+	}*/
 	/*
 	for (int i=0; i<(int) subwins.size()-1; i++) {
 		FWindow working = subwins[i];
@@ -588,6 +668,13 @@ void spewFaces(vector<FWindow> &faces) {
 
 
 void test() {
+	FWindow a = FWindow(0, 5, 0, 5);
+	FWindow b = FWindow(6, 8, 6, 8);
+	cout << windowsOverlap(a, b) << endl;
+	a = FWindow(0, 5, 0, 5);
+	b = a;//FWindow(4, 8, 4.9, 8);
+	cout << windowsOverlap(a, b) << endl;
+	/*
 	vector<WeakLearner> weaks = loadWeaks("out.txt");
 	vector<StrongLearner> strongs = loadStrongs("strongs.txt", weaks);
 	cout << strongs.size() << " strongs " << endl;
@@ -596,6 +683,7 @@ void test() {
 	fullWindow.push_back(FWindow(1, 1281, 1, 1601));
 	vector<FWindow> faces = findWindows(strongs, fullWindow, &(IMGTEST[0]));
 	spewFaces(faces);
+	*/
 }
 
 
