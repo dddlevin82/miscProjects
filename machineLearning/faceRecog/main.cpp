@@ -620,7 +620,7 @@ vector<FWindow> combineSubWins(vector<FWindow> subwins) {
 
 	return subwins;
 }
-
+int depth = 0;
 vector<FWindow> findWindows(vector<StrongLearner> strongs, vector<FWindow> wins, Grid *IMG) {
 	vector<FWindow> subWins;
 	int minLen = 55;
@@ -629,13 +629,18 @@ vector<FWindow> findWindows(vector<StrongLearner> strongs, vector<FWindow> wins,
 	StrongLearner s = strongs[0];
 	for (unsigned int i=0, ii=wins.size(); i<ii; i++) {
 		FWindow win = wins[i];
+
 		for (int nrows = minLen; nrows<=maxLen; nrows+=stride) {
 			for (int ncols = minLen; ncols<=maxLen; ncols+=stride) {
-				int maxrow = win.trace.y - nrows - 1;
-				int maxcol = win.trace.x - ncols - 1;
+				int maxrow = win.pos.y + win.trace.y - nrows - 1;
+				int maxcol = win.pos.x + win.trace.x - ncols - 1;
 				for (int row=win.pos.y; row<maxrow; row+=5) {
 					for (int col=win.pos.x; col<maxcol; col+=5) {
-	
+						/*
+						if (depth==1) {
+							cout << "checking one " << endl;	
+						}
+						*/
 						if (s.evalImg(*IMG, row, col, nrows, ncols)) {
 							subWins.push_back(FWindow(row, row + nrows, col, col + ncols));
 						//	cout << "got face " << subWins.size() << endl;
@@ -647,14 +652,15 @@ vector<FWindow> findWindows(vector<StrongLearner> strongs, vector<FWindow> wins,
 		}
 	}
 	int orig = subWins.size();
-	cout << "entering combine windows with " << orig << " windows" << endl;
+	//cout << "entering combine windows with " << orig << " windows" << endl;
 	vector<FWindow> combined = combineSubWins(subWins);
-	cout << "combed from " << orig << " to " << combined.size() << endl;
+	//cout << "combed from " << orig << " to " << combined.size() << endl;
 	if (strongs.size() == 1) {
 		return combined;
 	} else {
-		cout << "recursing" << endl;
+		//cout << "recursing" << endl;
 		vector<StrongLearner> remaining;
+		depth++;
 		remaining.insert(remaining.begin(), strongs.begin()+1, strongs.end());
 		return findWindows(remaining, combined, IMG);
 	}
