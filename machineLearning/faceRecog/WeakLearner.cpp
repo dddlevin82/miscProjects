@@ -158,6 +158,9 @@ bool WeakLearner::evalImg(Grid &img, int winRow, int winCol, int dWinRow, int dW
 	int rImax = winRow + dWinRow * rmax + .5;
 	int cImin = winCol + dWinCol * cmin + .5;
 	int cImax = winCol + dWinCol * cmax + .5;
+	if (spew) {
+		cout << rImin << ", " << rImax << ", " << cImin << ", " << cImax << endl;
+	}
 	double normFact = (rImax - rImin) * (cImax - cImin);
 	return p * haar(img, rImin, rImax, cImin, cImax) / normFact < p * cut;
 }

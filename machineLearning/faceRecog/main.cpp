@@ -437,8 +437,8 @@ vector<WeakLearner> loadWeaks(string fn) {
 void buildStrongLearners() {
 	int nface = 1000;
 	Grid *IMGSFACE = loadImages("../../../asIntFaces.txt", nface, 65, 65);
-	vector<int> weaksPer = {1, 5, 10, 20};
-	vector<WeakLearner> weaks = loadWeaks("nohup.out");
+	vector<int> weaksPer = {1, 5, 10, 20, 40};
+	vector<WeakLearner> weaks = loadWeaks("out.txt");
 	vector<StrongLearner> lns;
 	for (unsigned int i=0; i<weaksPer.size(); i++) {
 		vector<WeakLearner> forStr;
@@ -491,7 +491,8 @@ int findIdxlol(vector<FWindow> &wins, FWindow *w) {
 
 vector<FWindow> combineSubWins(vector<FWindow> &subwins) {
 	vector<FWindow> combd;
-	for (unsigned int i=0; i<subwins.size()-1; i++) {
+	cout << "size if " << subwins.size() << endl;
+	for (int i=0; i<(int) subwins.size()-1; i++) {
 		FWindow working = subwins[i];
 		for (unsigned int j=i+1; j<subwins.size(); j++) {
 			FWindow &test = subwins[j];
@@ -514,29 +515,42 @@ vector<FWindow> findWindows(vector<StrongLearner> strongs, vector<FWindow> wins,
 	int minLen = 55;
 	int maxLen = 70;
 	int stride = 5;
+	cout << (*IMG)[1280][1600] << endl;
 	StrongLearner s = strongs[0];
 	for (unsigned int i=0, ii=wins.size(); i<ii; i++) {
 		FWindow win = wins[i];
 		for (int nrows = minLen; nrows<=maxLen; nrows+=stride) {
-			for (int ncols = minLen; nrows<=maxLen; ncols+=stride) {
-				int maxrow = win.pos.y - nrows;
-				int maxcol = win.pos.x - ncols;
+			cout << "nrows = " << nrows << endl;
+			for (int ncols = minLen; ncols<=maxLen; ncols+=stride) {
+				int maxrow = win.trace.y - nrows - 1;
+				int maxcol = win.trace.x - ncols - 1;
+				cout << "max row " << maxrow << endl;
+				cout << "max col " << maxcol << endl;
 				for (int row=win.pos.y; row<maxrow; row++) {
 					for (int col=win.pos.x; col<maxcol; col++) {
+						if (col == 1320) {
+							cout << "vals " << row << ", " << nrows << ", " << col << ", " << ncols << endl;
+							cout << (*IMG)[row+nrows][col+ncols] << endl;
+							spew = true;
+						}
 						if (s.evalImg(*IMG, row, nrows, col, ncols)) {
 							subWins.push_back(FWindow(row, row + nrows, col, col + ncols));
+							cout << "got a face" << endl;
 						}
+						//cout << "col " << col << endl;
 					}
 				}
 			}
 
 		}
 	}
-
+	cout << "here" << endl;
 	vector<FWindow> combined = combineSubWins(subWins);
+	cout << "woo" << endl;cout.flush();
 	if (strongs.size() == 1) {
 		return combined;
 	} else {
+		cout << "recursing" << endl;
 		vector<StrongLearner> remaining;
 		remaining.insert(remaining.begin(), strongs.begin()+1, strongs.end());
 		return findWindows(remaining, combined, IMG);
@@ -551,19 +565,20 @@ void spewFaces(vector<FWindow> &faces) {
 
 
 void test() {
-	vector<WeakLearner> weaks = loadWeaks("nohup.out");
+	vector<WeakLearner> weaks = loadWeaks("out.txt");
 	vector<StrongLearner> strongs = loadStrongs("strongs.txt", weaks);
-
+	cout << strongs.size() << " strongs " << endl;
 	Grid *IMGTEST = loadImages("../../../asIntClass.txt", 1, 1281, 1601);
 	vector<FWindow> fullWindow;
 	fullWindow.push_back(FWindow(1, 1281, 1, 1601));
-	vector<FWindow> faces = findWindows(strongs, fullWindow, IMGTEST);
+	vector<FWindow> faces = findWindows(strongs, fullWindow, &(IMGTEST[0]));
 	spewFaces(faces);
 }
 
 
 int main() {
 	//train();
-	buildStrongLearners();
+	//buildStrongLearners();
+	test();
 	return 0;
 }
