@@ -544,7 +544,9 @@ vector<FWindow> findWindows(vector<StrongLearner> strongs, vector<FWindow> wins,
 }
 
 void spewFaces(vector<FWindow> &faces) {
-	
+	for (unsigned int i=0; i<faces.size(); i++) {
+		faces[i].spew();
+	}
 }
 
 

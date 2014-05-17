@@ -11,6 +11,9 @@ class FWindow {
 		trace = Vector(cmax - cmin, rmax - rmax);
 		span = trace.len();
 	}
+	void spew() {
+		cout << pos.y << " " pos.x << " " pos.y + trace.y << " " << pos.x + trace.x << endl;
+	}
 };
 
 #endif
