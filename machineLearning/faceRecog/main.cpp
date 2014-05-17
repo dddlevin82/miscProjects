@@ -477,19 +477,19 @@ vector<StrongLearner> loadStrongs(string fn, vector<WeakLearner> &weaks) {
 }
 
 
-double avg(a, b) {
+double avgDbl(double a, double b) {
 	return .5 * (a + b);
 }
 
 FWindow mergeWindows(FWindow &a, FWindow &b) {
-	double centerRow = avg(a.pos.y + a.trace.y * .5, b.pos.y + b.trace.y * .5);
-	double centerCol = avg(a.pos.x + a.trace.x * .5, b.pos.x + b.trace.x * .5);
-	double avgR = avg(a.trace.y, b.trace.y)
-	double avgC = avg(a.trace.x, b.trace.x);
+	double centerRow = avgDbl(a.pos.y + a.trace.y * .5, b.pos.y + b.trace.y * .5);
+	double centerCol = avgDbl(a.pos.x + a.trace.x * .5, b.pos.x + b.trace.x * .5);
+	double avgR = avgDbl(a.trace.y, b.trace.y);
+	double avgC = avgDbl(a.trace.x, b.trace.x);
 	double roughTotalSpanR = fabs(a.pos.y - b.pos.y) + avgR;
-	double roughTotalSpanC = fabs(a.pos.x - b.pox.x) + avgC;
-	double newdr = avg(avgR, roughTotalSpanR);
-	double newdc = avg(avgC, roughTotalSpawnC);
+	double roughTotalSpanC = fabs(a.pos.x - b.pos.x) + avgC;
+	double newdr = avgDbl(avgR, roughTotalSpanR);
+	double newdc = avgDbl(avgC, roughTotalSpanC);
 	int rmin = centerRow - .5 * newdr + .5;
 	int rmax = centerRow + .5 * newdr + .5;
 	int cmin = centerCol - .5 * newdc + .5;

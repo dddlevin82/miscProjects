@@ -25,9 +25,10 @@ def drawline(img, rowa, cola, rowb, colb):
 		colrange = range(cola, colb + 1)
 	for r in rowrange:
 		for c in colrange:
-			img[r][c] = 255
-
-
+			try:
+				img[r][c] = 255
+			except:
+				i = 0
 img = Image.open('../../../class.jpg')
 img1d = np.array(img.getdata())
 img2d = to2d(img1d, 1280, 1600)
