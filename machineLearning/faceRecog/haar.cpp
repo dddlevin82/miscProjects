@@ -15,13 +15,14 @@ double haarTwoHoriz(Grid &img, int rmin, int rmax, int cmin, int cmax) {
 
 double haarTwoVert(Grid &img, int rmin, int rmax, int cmin, int cmax) {
 	int ccut = ((double) cmin + cmax) / 2 + .5;
-	
+/*	
 	if (spew) {
 		cout << "b";
 		cout << ccut<<endl;
 		cout << "r max " << rmax << endl;
 		cout << img[rmax][cmax-1] << endl;cout.flush();
 	}
+	*/
 	double iA = getIntense(img, rmin, rmax, ccut, cmax);
 	double iB = getIntense(img, rmin, rmax, cmin, ccut);
 	return iA - iB;

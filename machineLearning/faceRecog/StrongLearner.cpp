@@ -27,7 +27,7 @@ void StrongLearner::normalizeWeights() {
 }
 
 void StrongLearner::learnOffset(Grid *faces, int nFaces, double maxFalseNegFrac) {
-	double curOffset = .5;
+	double curOffset = .7;
 	double dOffset = curOffset / 10;
 	double wrongs = nFaces;
 	while (wrongs / nFaces > maxFalseNegFrac) {

@@ -5,8 +5,8 @@ def loadWindows(fn):
 	f = open(fn, 'r')
 	windows = []
 	for l in f.readlines():
-		windows.append(tuple([float(x) for x in l.split()]))
-	return np.array(windows)
+		windows.append(tuple([int(x) for x in l.split()]))
+	return np.array(windows, np.int32)
 
 def to2d(flat, nr, nc):
 	img2d = []
@@ -32,14 +32,15 @@ img = Image.open('../../../class.jpg')
 img1d = np.array(img.getdata())
 img2d = to2d(img1d, 1280, 1600)
 
-windows = loadWindows('windows.txt')
+windows = loadWindows('faceOutlines.txt')
 
 for w in windows:
 	drawline(img2d, w[0], w[1], w[0], w[3])
 	drawline(img2d, w[0], w[1], w[2], w[1])
 	drawline(img2d, w[2], w[3], w[0], w[3])
-	drawline(img2d, w[2], w[3], w[2], w[2])
+	drawline(img2d, w[2], w[3], w[2], w[1])
 
 
 withLines = Image.fromarray(img2d)
-withLines.save('facesOutlines.png')
+withLines.show()
+#withLines.save('facesOutlines.bmp')
