@@ -8,7 +8,7 @@ StrongLearner::StrongLearner(vector<WeakLearner> weaks) {
 StrongLearner::StrongLearner(double args[2], vector<WeakLearner> &weaks) {
 	int numWeaks = args[0];
 	offset = args[1];
-	for (unsigned int i=0; i<weaks.size(); i++) {
+	for (int i=0; i<numWeaks; i++) {
 		weakLearners.push_back(weaks[i]);
 	}
 	normalizeWeights();
@@ -58,10 +58,10 @@ bool StrongLearner::evalImgLearn(Grid &face, double curOffset) {
 	return sumWeaks > curOffset;
 }
 
-bool StrongLearner::evalImg(Grid &face, int winRow, int winCol, int dWinRow, int dWinCol) {
+bool StrongLearner::evalImg(Grid &img, int winRow, int winCol, int dWinRow, int dWinCol) {
 	double sumWeaks = 0;
 	for (unsigned int i=0; i<weakLearners.size(); i++) {
-		sumWeaks += weakLearners[i].evalImg(face, winRow, winCol, dWinRow, dWinCol) * weakLearners[i].weight;
+		sumWeaks += weakLearners[i].evalImg(img, winRow, winCol, dWinRow, dWinCol) * weakLearners[i].weight;
 	}
 	return sumWeaks > offset;
 

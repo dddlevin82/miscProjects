@@ -5,6 +5,8 @@
 #include "StrongLearner.h"
 #include <pthread.h>
 #include "math.h"
+#include "Window.h"
+#include <algorithm>
 #include <sstream>
 #include <string>
 #define NUMCOLS 30000 //1000
@@ -470,12 +472,91 @@ vector<StrongLearner> loadStrongs(string fn, vector<WeakLearner> &weaks) {
 	return strongs;
 }
 
+FWindow mergeWindows(FWindow &a, FWindow &b) {
+	int rmin = (a.pos.y + b.pos.y) / 2 + .5;
+	int rmax = (a.pos.y + a.trace.y + b.pos.y + b.trace.y) / 2 + .5;
+	int cmin = (a.pos.x + b.pos.x) / 2 + .5;
+	int cmax = (a.pos.x + a.trace.x + b.pos.x + b.trace.x) / 2 + .5;
+	return FWindow(rmin, rmax, cmin, cmax);
+}
 
+int findIdxlol(vector<FWindow> &wins, FWindow *w) {
+	for (unsigned int i=0; i<wins.size(); i++) {
+		if (w==&wins[i])	{
+			return i;
+		}
+	}
+	return -1;
+}
+
+vector<FWindow> combineSubWins(vector<FWindow> &subwins) {
+	vector<FWindow> combd;
+	for (unsigned int i=0; i<subwins.size()-1; i++) {
+		FWindow working = subwins[i];
+		for (unsigned int j=i+1; j<subwins.size(); j++) {
+			FWindow &test = subwins[j];
+			if (working.pos.dist(test.pos) < working.span / 4 && working.span / test.span < 1.5) {
+				working = mergeWindows(working, test);
+				int idx = findIdxlol(subwins, &test);
+				subwins.erase(subwins.begin() + idx);
+			}
+		}
+		combd.push_back(working);
+	}
+	if (subwins.size() > 1) {
+		combd.push_back(subwins[subwins.size()-1]);
+	}
+	return combd;
+}
+
+vector<FWindow> findWindows(vector<StrongLearner> strongs, vector<FWindow> wins, Grid *IMG) {
+	vector<FWindow> subWins;
+	int minLen = 55;
+	int maxLen = 70;
+	int stride = 5;
+	StrongLearner s = strongs[0];
+	for (unsigned int i=0, ii=wins.size(); i<ii; i++) {
+		FWindow win = wins[i];
+		for (int nrows = minLen; nrows<=maxLen; nrows+=stride) {
+			for (int ncols = minLen; nrows<=maxLen; ncols+=stride) {
+				int maxrow = win.pos.y - nrows;
+				int maxcol = win.pos.x - ncols;
+				for (int row=win.pos.y; row<maxrow; row++) {
+					for (int col=win.pos.x; col<maxcol; col++) {
+						if (s.evalImg(*IMG, row, nrows, col, ncols)) {
+							subWins.push_back(FWindow(row, row + nrows, col, col + ncols));
+						}
+					}
+				}
+			}
+
+		}
+	}
+
+	vector<FWindow> combined = combineSubWins(subWins);
+	if (strongs.size() == 1) {
+		return combined;
+	} else {
+		vector<StrongLearner> remaining;
+		remaining.insert(remaining.begin(), strongs.begin()+1, strongs.end());
+		return findWindows(remaining, combined, IMG);
+	}
+}
+
+void spewFaces(vector<FWindow> &faces) {
+	
+}
 
 
 void test() {
 	vector<WeakLearner> weaks = loadWeaks("nohup.out");
 	vector<StrongLearner> strongs = loadStrongs("strongs.txt", weaks);
+
+	Grid *IMGTEST = loadImages("../../../asIntClass.txt", 1, 1281, 1601);
+	vector<FWindow> fullWindow;
+	fullWindow.push_back(FWindow(1, 1281, 1, 1601));
+	vector<FWindow> faces = findWindows(strongs, fullWindow, IMGTEST);
+	spewFaces(faces);
 }
 
 
