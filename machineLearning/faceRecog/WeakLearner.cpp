@@ -25,6 +25,12 @@ WeakLearner::WeakLearner(double args[9]) {
 	cmax = args[3];
 	p = (int) args[4];
 	cut = args[5];
+	
+	if (p == -1 && cut == 0) {
+		cut = .01;
+	} else if (p == 1 && cut == 0) {
+		cut = -.01;
+	}
 	weight = args[6];
 	sumErr = args[7];
 	int fId = args[8];
@@ -118,6 +124,7 @@ void WeakLearner::print() {
 }
 
 pair<vector<double>, vector<double> > WeakLearner::yieldErrors(Grid *faces, int nfaces, Grid *nonfaces, int nnonfaces) {
+	//cout << "in yield" << endl;
 	vector<double> faceErrors;
 	vector<double> nonfaceErrors;
 	faceErrors.reserve(nfaces);
@@ -149,6 +156,11 @@ bool WeakLearner::evalImgTrain(Grid &img, double curCut) {
 	int cImin = nc * cmin + .5;
 	int cImax = nc * cmax + .5;
 	double normFact = (rImax - rImin) * (cImax - cImin);
+	/*
+	cout << rImin << " " << rImax << " " << cImin << " " << cImax << endl;
+	cout << haar(img, rImin, rImax, cImin, cImax) << endl;
+	cout << "normed " << haar(img, rImin, rImax, cImin, cImax) / normFact << endl;;
+	*/
 	return p * haar(img, rImin, rImax, cImin, cImax) / normFact < p * curCut;
 }
 

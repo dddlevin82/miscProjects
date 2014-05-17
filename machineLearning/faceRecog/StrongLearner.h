@@ -11,7 +11,7 @@ class StrongLearner {
 		StrongLearner(vector<WeakLearner>);
 		StrongLearner(double args[2], vector<WeakLearner> &);
 		void forOutput();
-		void learnOffset(Grid *faces, int nFaces, double maxFalseNegFrac);
+		void learnOffset(Grid *faces, int nFaces, double maxFalseNegFrac, Grid *, int);
 		bool evalImgLearn(Grid &face, double curOffset);
 		bool evalImg(Grid &face, int winRow, int winCol, int dWinRow, int dWinCol);
 };
