@@ -525,7 +525,7 @@ FWindow maxOfWindows(vector<FWindow> &wins) {
 
 
 bool overlapsWithMega(vector<FWindow> &mega, FWindow working) {
-	for (unsigned int i=0; i<mega.size(); i++) {
+	for (unsigned int i=0, ii=mega.size(); i<ii; i++) {
 		if (windowsOverlap(mega[i], working)) {
 			return true;
 		}
@@ -668,13 +668,6 @@ void spewFaces(vector<FWindow> &faces) {
 
 
 void test() {
-	FWindow a = FWindow(0, 5, 0, 5);
-	FWindow b = FWindow(6, 8, 6, 8);
-	cout << windowsOverlap(a, b) << endl;
-	a = FWindow(0, 5, 0, 5);
-	b = a;//FWindow(4, 8, 4.9, 8);
-	cout << windowsOverlap(a, b) << endl;
-	/*
 	vector<WeakLearner> weaks = loadWeaks("out.txt");
 	vector<StrongLearner> strongs = loadStrongs("strongs.txt", weaks);
 	cout << strongs.size() << " strongs " << endl;
@@ -683,7 +676,6 @@ void test() {
 	fullWindow.push_back(FWindow(1, 1281, 1, 1601));
 	vector<FWindow> faces = findWindows(strongs, fullWindow, &(IMGTEST[0]));
 	spewFaces(faces);
-	*/
 }
 
 
