@@ -476,11 +476,24 @@ vector<StrongLearner> loadStrongs(string fn, vector<WeakLearner> &weaks) {
 	return strongs;
 }
 
+
+double avg(a, b) {
+	return .5 * (a + b);
+}
+
 FWindow mergeWindows(FWindow &a, FWindow &b) {
-	int rmin = (a.pos.y + b.pos.y) / 2 + .5;
-	int rmax = (a.pos.y + a.trace.y + b.pos.y + b.trace.y) / 2 + .5;
-	int cmin = (a.pos.x + b.pos.x) / 2 + .5;
-	int cmax = (a.pos.x + a.trace.x + b.pos.x + b.trace.x) / 2 + .5;
+	double centerRow = avg(a.pos.y + a.trace.y * .5, b.pos.y + b.trace.y * .5);
+	double centerCol = avg(a.pos.x + a.trace.x * .5, b.pos.x + b.trace.x * .5);
+	double avgR = avg(a.trace.y, b.trace.y)
+	double avgC = avg(a.trace.x, b.trace.x);
+	double roughTotalSpanR = fabs(a.pos.y - b.pos.y) + avgR;
+	double roughTotalSpanC = fabs(a.pos.x - b.pox.x) + avgC;
+	double newdr = avg(avgR, roughTotalSpanR);
+	double newdc = avg(avgC, roughTotalSpawnC);
+	int rmin = centerRow - .5 * newdr + .5;
+	int rmax = centerRow + .5 * newdr + .5;
+	int cmin = centerCol - .5 * newdc + .5;
+	int cmax = centerCol + .5 * newdc + .5;
 	return FWindow(rmin, rmax, cmin, cmax);
 }
 
@@ -492,7 +505,7 @@ vector<FWindow> combineSubWins(vector<FWindow> subwins) {
 		FWindow working = subwins[i];
 		for (int j=i-1; j>=0; j--) {
 			FWindow &test = subwins[j];
-			if (working.pos.dist(test.pos) < working.span / 4) {
+			if (working.pos.dist(test.pos) < working.span / 3) {
 				working = mergeWindows(working, test);
 				subwins.erase(subwins.begin() + i);
 				numErased ++;
