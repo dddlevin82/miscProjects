@@ -85,11 +85,7 @@ void updateWeights(WeakLearner &ln, Grid *faces, int nfaces, Grid *nonfaces, int
 	pair<vector<double>, vector<double> > errs = ln.yieldErrors(faces, nfaces, nonfaces, nnonfaces);
 	vector<double> faceErrs = errs.first;
 	vector<double> nonfaceErrs = errs.second;
-	//cout << "sum error is " << sumErr << endl;
 	double beta = sumErr / (1 - sumErr);
-	//cout << "beta is " << beta << endl;
-	//cout << ln.faceErrors / (double) nfaces << " frac faces wrongs" << endl;
-	//cout << ln.nonfaceErrors / (double) nnonfaces << " frac nonfaces wrongs" << endl;
 	ln.weight = log(1 / beta);
 	for (int i=0; i<nfaces; i++) {
 		if (!faceErrs[i]) {
@@ -108,17 +104,7 @@ void updateWeights(WeakLearner &ln, Grid *faces, int nfaces, Grid *nonfaces, int
 	for (int i=0; i<nnonfaces; i++) {
 		nonfaceWeights[i] /= allWeights;
 	}
-	/*
-	cout << "new nonface weights" << endl;
-	for (int i=0; i<nnonfaces; i++) {
-		cout << nonfaceWeights[i] << ", ";
-	}
-	cout << "and errs " << endl;
-	for (int i=0; i<nnonfaces; i++) {
-		cout << nonfaceErrs[i] << ", ";
-	}
-	cout << endl;
-	*/
+
 }
 
 struct thread_info {
@@ -217,10 +203,7 @@ StrongLearner findStrongLearner(WeakLearner *lns, int nLns, WeakLearner *lnsSpar
 	for (int i=0; i<nnonfaces; i++) {
 		nonfaceWeights[i] = weight;
 	}
-//	for (int i=0; i<nnonfaces; i++) {
-//		cout << nonfaceWeights[i] << ", ";
-//	}
-//	cout << endl;
+
 	for (int i=0; i<howmany; i++) {
 		cout << "going to find weak" << endl;
 		WeakLearner l = findWeakLearner(lnsSparse, nlnsSparse, faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights);
@@ -232,7 +215,7 @@ StrongLearner findStrongLearner(WeakLearner *lns, int nLns, WeakLearner *lnsSpar
 			sumErr = getSumErr(l, faces, nfaces, nonfaces, nnonfaces, faceWeights, nonfaceWeights);	
 		//	cout << "did dense" << endl;
 			if (sumErr >= 0.5) {
-		//		cout << "OMG DIVERGENCE" << endl;
+				cout << "OMG DIVERGENCE" << endl;
 			}
 		} else {
 			cout << "success with sparse" << endl;
@@ -543,7 +526,6 @@ vector<FWindow> procMegas(vector<vector<FWindow> > &megas) {
 }
 
 vector<FWindow> combineSubWins(vector<FWindow> subwins, bool isLast) {
-	int numErased = 0;
 	for (int i=(int)subwins.size()-1; i>=1; i--) {
 		FWindow working = subwins[i];
 		for (int j=i-1; j>=0; j--) {
@@ -554,9 +536,6 @@ vector<FWindow> combineSubWins(vector<FWindow> subwins, bool isLast) {
 				working = mergeWindows(working, test);
 				subwins.erase(subwins.begin() + i);
 				numErased ++;
-				if (!(numErased%10000)) {
-					//cout << "erased " << numErased << endl;
-				}
 				subwins[j] = working;
 				break;
 			}
@@ -605,16 +584,10 @@ vector<FWindow> findWindows(vector<StrongLearner> strongs, vector<FWindow> wins,
 			for (int ncols = minLen; ncols<=maxLen; ncols+=stride) {
 				int maxrow = win.pos.y + win.trace.y - nrows - 1;
 				int maxcol = win.pos.x + win.trace.x - ncols - 1;
-				for (int row=win.pos.y; row<maxrow; row+=5) {
-					for (int col=win.pos.x; col<maxcol; col+=5) {
-						/*
-						if (depth==1) {
-							cout << "checking one " << endl;	
-						}
-						*/
+				for (int row=win.pos.y; row<maxrow; row+=8) {
+					for (int col=win.pos.x; col<maxcol; col+=8) {
 						if (s.evalImg(*IMG, row, col, nrows, ncols)) {
 							subWins.push_back(FWindow(row, row + nrows, col, col + ncols));
-						//	cout << "got face " << subWins.size() << endl;
 						} 
 					}
 				}
@@ -623,13 +596,10 @@ vector<FWindow> findWindows(vector<StrongLearner> strongs, vector<FWindow> wins,
 		}
 	}
 	int orig = subWins.size();
-	//cout << "entering combine windows with " << orig << " windows" << endl;
 	vector<FWindow> combined = combineSubWins(subWins, strongs.size()==1);
-	//cout << "combed from " << orig << " to " << combined.size() << endl;
 	if (strongs.size() == 1) {
 		return combined;
 	} else {
-		//cout << "recursing" << endl;
 		vector<StrongLearner> remaining;
 		depth++;
 		remaining.insert(remaining.begin(), strongs.begin()+1, strongs.end());
@@ -647,7 +617,6 @@ void spewFaces(vector<FWindow> &faces) {
 void test() {
 	vector<WeakLearner> weaks = loadWeaks("out.txt");
 	vector<StrongLearner> strongs = loadStrongs("strongs.txt", weaks);
-	//cout << strongs.size() << " strongs " << endl;
 	Grid *IMGTEST = loadImages("../../../asIntClass.txt", 1, 1281, 1601);
 	vector<FWindow> fullWindow;
 	fullWindow.push_back(FWindow(1, 1281, 1, 1601));

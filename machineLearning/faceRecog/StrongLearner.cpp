@@ -38,7 +38,6 @@ void StrongLearner::learnOffset(Grid *faces, int nFaces, double maxFalseNegFrac,
 				wrongs++;
 			}
 		}
-	//	cout << "frac faces wrong " << wrongs/(double)nFaces << " with offset " << curOffset << endl;
 		double wrongsOther = 0;
 		for (int i=0; i<nnonfaces; i++) {
 			Grid &img = nonfaces[i];
@@ -46,27 +45,8 @@ void StrongLearner::learnOffset(Grid *faces, int nFaces, double maxFalseNegFrac,
 				wrongsOther++;
 			}
 		}
-	//	cout << "frac nonfaces wrong " << wrongsOther/(double)nnonfaces << " with offset " << curOffset << endl;
 		curOffset -= dOffset;
 	}
-	/*
-	wrongs = 0;
-	for (int i=0; i<nFaces; i++) {
-		Grid &face = faces[i];
-		if (!evalImgLearn(face, curOffset)) {
-			wrongs++;
-		}
-	}
-	cout << wrongs/(double)nFaces << " " << curOffset << endl;
-	double wrongsOther = 0;
-	for (int i=0; i<nnonfaces; i++) {
-		Grid &img = nonfaces[i];
-		if (evalImgLearn(img, curOffset)) {
-			wrongsOther++;
-			}
-	}
-	cout << wrongsOther/(double)nnonfaces << " " << curOffset << endl;
-	*/
 	curOffset += dOffset;
 	offset = curOffset;	
 }
@@ -78,7 +58,7 @@ void StrongLearner::forOutput() {
 bool StrongLearner::evalImgLearn(Grid &face, double curOffset) {
 	double sumWeaks = 0;
 	for (unsigned int i=0; i<weakLearners.size(); i++) {
-		sumWeaks += weakLearners[i].evalImg(face, 0, 0, (int) face.nr - 1, (int) face.nc - 1) * weakLearners[i].weight; //IS THIS RIGHT?
+		sumWeaks += weakLearners[i].evalImg(face, 0, 0, (int) face.nr - 1, (int) face.nc - 1) * weakLearners[i].weight; 
 	}
 	return sumWeaks > curOffset;
 }
