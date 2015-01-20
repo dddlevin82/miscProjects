@@ -431,7 +431,7 @@ void buildStrongLearners() {
 		vector<WeakLearner> forStr;
 		forStr.insert(forStr.begin(), weaks.begin(), weaks.begin() + weaksPer[i]);
 		StrongLearner s = StrongLearner(forStr);
-		s.learnOffset(IMGSFACE, nface, .02, IMGSNONFACES, nface);
+		s.learnOffset(IMGSFACE, nface, .05, IMGSNONFACES, nface);
 		s.forOutput();
 		
 	}
@@ -535,7 +535,6 @@ vector<FWindow> combineSubWins(vector<FWindow> subwins, bool isLast) {
 			if (working.pos.dist(test.pos) < working.span / 3) {
 				working = mergeWindows(working, test);
 				subwins.erase(subwins.begin() + i);
-				numErased ++;
 				subwins[j] = working;
 				break;
 			}
@@ -570,11 +569,20 @@ vector<FWindow> combineSubWins(vector<FWindow> subwins, bool isLast) {
 
 }
 
+bool tryCascade(vector<StrongLearner> &s, Grid *IMG, int row, int drow, int col, int dcol) {
+	for (unsigned int i=0; i<s.size(); i++) {
+		if (!s[i].evalImg(*IMG, row, col, drow, dcol)) {
+			return false;
+		}
+	}
+	return true;
+}
+
 int depth = 0;
 vector<FWindow> findWindows(vector<StrongLearner> strongs, vector<FWindow> wins, Grid *IMG) {
 	vector<FWindow> subWins;
-	int minLen = 55;
-	int maxLen = 70;
+	int minLen = 64;
+	int maxLen = 64;
 	int stride = 5;
 	StrongLearner s = strongs[0];
 	for (unsigned int i=0, ii=wins.size(); i<ii; i++) {
@@ -584,11 +592,16 @@ vector<FWindow> findWindows(vector<StrongLearner> strongs, vector<FWindow> wins,
 			for (int ncols = minLen; ncols<=maxLen; ncols+=stride) {
 				int maxrow = win.pos.y + win.trace.y - nrows - 1;
 				int maxcol = win.pos.x + win.trace.x - ncols - 1;
-				for (int row=win.pos.y; row<maxrow; row+=8) {
-					for (int col=win.pos.x; col<maxcol; col+=8) {
-						if (s.evalImg(*IMG, row, col, nrows, ncols)) {
+				for (int row=win.pos.y; row<maxrow; row+=5) {
+					for (int col=win.pos.x; col<maxcol; col+=5) {
+						//cout << "g" <<endl;cout.flush();
+						if (tryCascade(strongs, IMG, row, nrows, col, ncols)) {
+							
 							subWins.push_back(FWindow(row, row + nrows, col, col + ncols));
-						} 
+						}
+						//if (s.evalImg(*IMG, row, col, nrows, ncols)) {
+						//	subWins.push_back(FWindow(row, row + nrows, col, col + ncols));
+						//} 
 					}
 				}
 			}
@@ -596,7 +609,10 @@ vector<FWindow> findWindows(vector<StrongLearner> strongs, vector<FWindow> wins,
 		}
 	}
 	int orig = subWins.size();
-	vector<FWindow> combined = combineSubWins(subWins, strongs.size()==1);
+	vector<FWindow> combined = combineSubWins(subWins, true);
+	//vector<FWindow> combined = combineSubWins(subWins, strongs.size()==1);
+	return combined;
+	/*
 	if (strongs.size() == 1) {
 		return combined;
 	} else {
@@ -605,6 +621,7 @@ vector<FWindow> findWindows(vector<StrongLearner> strongs, vector<FWindow> wins,
 		remaining.insert(remaining.begin(), strongs.begin()+1, strongs.end());
 		return findWindows(remaining, combined, IMG);
 	}
+	*/
 }
 
 void spewFaces(vector<FWindow> &faces) {
